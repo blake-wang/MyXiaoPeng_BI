@@ -1,0 +1,15 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project version="4">
+  <component name="Encoding" defaultCharsetForPropertiesFiles="UTF-8">
+    <file url="file://$PROJECT_DIR$/bin/winutils.exe" charset="GBK" />
+    <file url="file://$PROJECT_DIR$/src/main/resources/conf.properties" charset="GBK" />
+    <file url="file://$PROJECT_DIR$/src/main/resources/conf_pre.properties" charset="GBK" />
+    <file url="file://$PROJECT_DIR$/src/main/resources/conf_product.properties" charset="GBK" />
+    <file url="file://$PROJECT_DIR$/src/main/resources/core-site.xml" charset="GBK" />
+    <file url="file://$PROJECT_DIR$/src/main/resources/env.properties" charset="GBK" />
+    <file url="file://$PROJECT_DIR$/src/main/resources/hdfs-site.xml" charset="GBK" />
+    <file url="file://$PROJECT_DIR$/src/main/resources/hive-site.xml" charset="GBK" />
+    <file url="file://$PROJECT_DIR$/src/main/scala/cn/xiaopeng/bi/utils/DateUtils.scala" charset="UTF-8" />
+    <file url="PROJECT" charset="UTF-8" />
+  </component>
+</project>
