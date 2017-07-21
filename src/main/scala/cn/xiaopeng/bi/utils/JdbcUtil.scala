@@ -17,16 +17,16 @@ object JdbcUtil {
     *
     * @return MysqlConnection
     */
-  def getXiaopeng2Conn() = {
+  def getXiaopeng2Conn():Connection = {
     val url = ConfigurationUtil.getProperty(Constants.JDBC_XIAOPENG2_URL)
     val driver = ConfigurationUtil.getProperty(Constants.JDBC_DRIVER)
     try {
       Class.forName(driver)
-      DriverManager.getConnection(url)
+      return DriverManager.getConnection(url)
     } catch {
       case ex:Exception =>{
         println("获取数据库连接错误：Exception=" + ex)
-        null
+       return  null
       }
     }
   }
