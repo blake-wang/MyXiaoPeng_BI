@@ -72,7 +72,7 @@ object GamePublicActs {
         val isNewRegiDevDay = GamePublicDao.isNewRegiDevDay(pkg_code, imei, order_date, medium_channel, ad_site_channel,game_id, conn)
         //是否为当日新增注册设备
         //是否为新增注册设备
-        val isNewRegiAccountDay = GamePublicDao.isNewRegiAccountDay
+//        val isNewRegiAccountDay = GamePublicDao.isNewRegiAccountDay
 
       }
     }

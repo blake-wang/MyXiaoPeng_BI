@@ -1,5 +1,6 @@
 package cn.xiaopeng.bi.utils
 
+import cn.wanglei.bi.utils.InsertMissInfo2RedisUtil
 import org.apache.spark.rdd.RDD
 import redis.clients.jedis.{Jedis, JedisPool}
 
