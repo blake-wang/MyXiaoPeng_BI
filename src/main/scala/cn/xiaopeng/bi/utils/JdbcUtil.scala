@@ -8,8 +8,8 @@ import scala.collection.mutable.ArrayBuffer
 
 
 /**
- * Created by wanglei on 2017/7/13.
- */
+  * Created by wanglei on 2017/7/13.
+  */
 object JdbcUtil {
 
   /**
@@ -17,17 +17,35 @@ object JdbcUtil {
     *
     * @return MysqlConnection
     */
-  def getXiaopeng2Conn():Connection = {
+  def getXiaopeng2Conn(): Connection = {
     val url = ConfigurationUtil.getProperty(Constants.JDBC_XIAOPENG2_URL)
     val driver = ConfigurationUtil.getProperty(Constants.JDBC_DRIVER)
     try {
       Class.forName(driver)
       return DriverManager.getConnection(url)
     } catch {
-      case ex:Exception =>{
+      case ex: Exception => {
         println("获取数据库连接错误：Exception=" + ex)
-       return  null
+        return null
       }
+    }
+  }
+
+  /**
+    * 发行业务库连接
+    * @return
+    */
+  def getXiaopeng2FXConn():Connection={
+    val url = ConfigurationUtil.getProperty(Constants.JDBC_XIAOPENG2FX_URL)
+    val driver = ConfigurationUtil.getProperty(Constants.JDBC_DRIVER)
+    try {
+      Class.forName(driver)
+      return DriverManager.getConnection(url)
+    } catch {
+      case ex: Exception => {
+        println("获取数据库连接错误：Exception=" + ex)
+      }
+        return null
     }
   }
 
@@ -79,6 +97,19 @@ object JdbcUtil {
       pstat.executeBatch()
       pstat.close()
       conn.close()
+      params.clear
+    }
+  }
+
+  def executeUpdate(pstat: PreparedStatement, params: ArrayBuffer[Array[Any]], conn: Connection): Unit = {
+    if (params.length > 0) {
+      for (param <- params) {
+        for (index <- 0 to param.length - 1) {
+          pstat.setObject(index + 1, params(index))
+        }
+
+        pstat.executeUpdate()
+      }
       params.clear
     }
   }

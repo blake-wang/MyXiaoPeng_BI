@@ -268,4 +268,12 @@ object DateUtils {
     }
     null
   }
+
+  def getDay(bt:Int):String={
+    val cal = Calendar.getInstance()
+    var dt = ""
+    cal.add(Calendar.DATE,bt)
+    dt = DATE_FORMAT.format(cal.getTime)
+    dt
+  }
 }
