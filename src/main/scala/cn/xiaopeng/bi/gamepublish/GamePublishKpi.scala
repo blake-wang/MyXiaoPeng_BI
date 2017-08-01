@@ -15,11 +15,11 @@ import org.apache.spark.streaming.{Seconds, StreamingContext}
   * 1、实时注册，登录统计
   */
 object GamePublishKpi {
-  var arg = "60"
+  var arg = "600"
 
   def main(args: Array[String]): Unit = {
-    Logger.getLogger("org.apache.spark").setLevel(Level.WARN)
-    Logger.getLogger("org.eclipse.jetty.server").setLevel(Level.OFF)
+//    Logger.getLogger("org.apache.spark").setLevel(Level.WARN)
+//    Logger.getLogger("org.eclipse.jetty.server").setLevel(Level.OFF)
     if (args.length == 1) {
       arg = args(0)
     }
@@ -52,18 +52,24 @@ object GamePublishKpi {
 
 
     val dsLogs: DStream[String] = KafkaUtils.createDirectStream[String, String, StringDecoder, StringDecoder](ssc, kafkaParams, topicsSet).map(_._2)
+    dsLogs.print()
     dsLogs.foreachRDD(rdd => {
-      //打印
-      rdd.collect().foreach(println(_))
-      val sc = rdd.sparkContext
-      val hiveContext = HiveContextSingleton.getInstance(sc)
+      if(rdd.count()>0)
+        {
+          //打印
+          rdd.collect().foreach(println(_))
+          val sc = rdd.sparkContext
+          val hiveContext = HiveContextSingleton.getInstance(sc)
 
-      //基本维度信息
-      PublicFxGgameTbPush2Redis.publicGgameTbPush2Redis()
-      //把以前的日志 bi_pubgame 和本次实时的日志  bi_pubgame  相加
-      StreamingUtils.convertPubGameLogsToDfTmpTable(rdd, hiveContext)
-      //处理注册日志
-      GamePublicRegiUtil.loadRegiInfo(rdd, hiveContext)
+          //基本维度信息
+          PublicFxGgameTbPush2Redis.publicGgameTbPush2Redis()
+          //把以前的日志 bi_pubgame 和本次实时的日志  bi_pubgame  相加
+          StreamingUtils.convertPubGameLogsToDfTmpTable(rdd, hiveContext)
+          //处理注册日志
+          GamePublicRegiUtil.loadRegiInfo(rdd, hiveContext)
+          //
+        }
+
 
     })
 

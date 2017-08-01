@@ -6,7 +6,7 @@ import com.sun.xml.internal.bind.v2.TODO
 import org.apache.spark.rdd.RDD
 import org.apache.spark.sql.{DataFrame, Row}
 import org.apache.spark.sql.hive.HiveContext
-import org.apache.spark.sql.types.{StringType, StructType}
+import org.apache.spark.sql.types.{IntegerType, StringType, StructType}
 import redis.clients.jedis.{Jedis, JedisPool}
 
 import scala.collection.mutable.ArrayBuffer
@@ -30,9 +30,15 @@ object GamePublicRegiUtil {
     });
     if (!regiRdd.isEmpty()) {
       //将过滤后的rdd数据转换为dataframe
-      val regiStruct = (new StructType).add("game_account", StringType)
-        .add("game_id", StringType).add("parent_channel", StringType).add("child_channel", StringType)
-        .add("ad_label", StringType).add("reg_time", StringType).add("imei", StringType)
+      //这里表头的数据类型，和Row中的字段的类型要一样，否则解析不正确
+      val regiStruct = (new StructType)
+        .add("game_account", StringType)
+        .add("game_id", IntegerType)
+        .add("parent_channel", StringType)
+        .add("child_channel", StringType)
+        .add("ad_label", StringType)
+        .add("reg_time", StringType)
+        .add("imei", StringType)
       val regiDF = hiveContext.createDataFrame(regiRdd, regiStruct)
       regiDF.registerTempTable("ods_regi_rz_cache")
 
