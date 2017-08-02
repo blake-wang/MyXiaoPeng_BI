@@ -75,6 +75,7 @@ public class PublicFxGgameTbPush2Redis {
             merchant.put("pkg_code", rs.getString("pkg_code") == null ? "0" : rs.getString("pkg_code"));
             merchant.put("medium_account", rs.getString("merchant") == null ? "0" : rs.getString("merchant"));
             jedis.hmset(rs.getString("pkg_code") + "_pkgcode", merchant);//加载到redis
+
         }
         //推广渠道1
         String sqlc1 = "select distinct pkg_code,main_name promotion_channel from channel_pkg a join channel_main b on b.id=a.main_id ";

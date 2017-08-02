@@ -2,7 +2,7 @@ package cn.xiaopeng.bi.gamepublish
 
 import cn.wanglei.bi.ConfigurationUtil
 import cn.wanglei.bi.utils.PublicFxGgameTbPush2Redis
-import cn.xiaopeng.bi.utils.{GamePublicRegiUtil, HiveContextSingleton, SparkUtils, StreamingUtils}
+import cn.xiaopeng.bi.utils._
 import kafka.serializer.StringDecoder
 import org.apache.log4j.{Level, Logger}
 import org.apache.spark.streaming.dstream.DStream
@@ -24,7 +24,7 @@ object GamePublishKpi {
       arg = args(0)
     }
 
-    //生产环境需要checkpoint
+    //生产环境需要checkpoint  这个方法，在程序运行的过程中挂了，重新启动之后 会先去 checkpoint ，没有 再创建ssc
 //    val ssc = StreamingContext.getOrCreate(ConfigurationUtil.getProperty("spark.checkpoint.kpi"), getStreamingContext _);
 
     //测试环境不许要checkpoint
@@ -57,7 +57,7 @@ object GamePublishKpi {
       if(rdd.count()>0)
         {
           //打印
-          rdd.collect().foreach(println(_))
+          rdd.foreach(println(_))
           val sc = rdd.sparkContext
           val hiveContext = HiveContextSingleton.getInstance(sc)
 
@@ -67,10 +67,11 @@ object GamePublishKpi {
           StreamingUtils.convertPubGameLogsToDfTmpTable(rdd, hiveContext)
           //处理注册日志
           GamePublicRegiUtil.loadRegiInfo(rdd, hiveContext)
-          //
+          //处理激活日志
+//          GamePublicActiveUtil.loadActiveInfo()
+          //处理登录数据
+          GamePublic
         }
-
-
     })
 
     //测试环境不许要checkpoint

@@ -2,7 +2,7 @@ package cn.xiaopeng.bi.utils
 
 import java.sql.{Connection, PreparedStatement}
 
-import com.sun.xml.internal.bind.v2.TODO
+
 import org.apache.spark.rdd.RDD
 import org.apache.spark.sql.{DataFrame, Row}
 import org.apache.spark.sql.hive.HiveContext
@@ -20,6 +20,7 @@ object GamePublicRegiUtil {
 
   //加载注册信息
   def loadRegiInfo(rdd: RDD[String], hiveContext: HiveContext): Unit = {
+    //一、数据准备  将日志转化为表
     val regiRdd = rdd.filter(t => { //filter的返回值是boolean   用来过滤
       val arr = t.split("\\|")
       arr(0).contains("bi_regi") && arr.length > 14 && StringUtils.isNumber(arr(4))
@@ -42,6 +43,7 @@ object GamePublicRegiUtil {
       val regiDF = hiveContext.createDataFrame(regiRdd, regiStruct)
       regiDF.registerTempTable("ods_regi_rz_cache")
 
+      //二、按小时去重的字段
       hiveContext.sql("use yyft")
       val sql_bi_regi_Hour = "select distinct   lastPubGame.child_game_id as child_game_id,   \nods_regi_rz_cache.parent_channel as parent_channel,   \nods_regi_rz_cache.child_channel as child_channel,   \nods_regi_rz_cache.ad_label as ad_label,   \nods_regi_rz_cache.reg_time as reg_time,   \nods_regi_rz_cache.imei as imei,  \nods_regi_rz_cache.game_account as game_account   \nfrom   \n(select distinct game_id,parent_channel,child_channel,ad_label,imei,game_account,substr(min(reg_time),0,13) as reg_time from ods_regi_rz_cache group by game_id,parent_channel,child_channel,ad_label,imei,game_account) ods_regi_rz_cache   join (select distinct game_id as child_game_id  from lastPubGame) lastPubGame on ods_regi_rz_cache.game_id=lastPubGame.child_game_id --注册按小时去重"
       val df_bi_regi_Hour: DataFrame = hiveContext.sql(sql_bi_regi_Hour)
@@ -62,6 +64,36 @@ object GamePublicRegiUtil {
         val sql_detail = "INSERT INTO bi_gamepublic_regi_detail(game_id,parent_channel,child_channel,ad_label,regi_hour,imei) VALUES (?,?,?,?,?,?) "
         val pstat_sql_detail: PreparedStatement = conn.prepareStatement(sql_detail)
         var ps_sql_detail_params = new ArrayBuffer[Array[Any]]()
+
+        //二、更新投放小时表  按小时去重
+        //1、新增注册设备数  new_regi_device_num  永久去重
+        val sqlkpi_hour_new_regi_device = "INSERT INTO bi_gamepublic_basekpi(parent_game_id,game_id,parent_channel,child_channel,ad_label,publish_time,new_regi_device_num) VALUES (?,?,?,?,?,?,?) ON DUPLICATE KEY update os=?,group_id=?,medium_account=?,promotion_channel=?,promotion_mode=?,head_people=?,new_regi_device_num=new_regi_device_num + VALUES(new_regi_device_num)"
+        val pstat_sqlkpi_detail = conn.prepareStatement(sqlkpi_hour_new_regi_device)
+        var kpi_hour_new_regi_device_params = new ArrayBuffer[Array[Any]]()
+
+        //2、新增注册帐号数  new_regi_account_num
+        //更新  bi_gamepublic_base_day_kpi   每天数据  特殊
+        val sqlkpi_day_new_regi_account = "INSERT INTO bi_gamepublic_base_day_kpi(parent_game_id,child_game_id,medium_channel,ad_site_channel,pkg_code,publish_date,new_regi_account_num) VALUES (?,?,?,?,?,?,?) ON DUPLICATE KEY update os=?,group_id=?,medium_account=?,promotion_channel=?,promotion_mode=?,head_people=?,new_regi_account_num=new_regi_account_num + VALUES(new_regi_account_num)"
+        val pstat_sqlkpi_day_new_regi_device = conn.prepareStatement(sqlkpi_day_new_regi_account)
+        var pskpi_day_new_regi_device_params = new ArrayBuffer[Array[Any]]()
+
+        //3、注册设备数 regi_device_num
+        //更新 bi_gamepublic_base_day_kpi  每天数据  按天去重
+        val sqlkpi_day_regi_device = "INSERT INTO bi_gamepublic_base_day_kpi(parent_game_id,child_game_id,medium_channel,ad_site_channel,pkg_code,publish_date,regi_device_num) VALUES (?,?,?,?,?,?,?) ON DUPLICATE KEY update os=?,group_id=?,medium_account=?,promotion_channel=?,promotion_mode=?,head_people=?,regi_device_num=regi_device_num + VALUES(regi_device_num)"
+        val pstat_sqlkpi_day_regi_device = conn.prepareStatement(sqlkpi_day_regi_device)
+        var pskpi_day_regi_device_params = new ArrayBuffer[Array[Any]]
+
+        //四、更新 运营天表（日报）
+        //1、新增注册设备数
+        val sql_opera_kpi_day_new_regi_device = "INSERT INTO bi_gamepublic_base_opera_kpi(parent_game_id,child_game_id,publish_date,new_regi_device_num,os,group_id) VALUES (?,?,?,?,?,?) ON DUPLICATE KEY update new_regi_device_num=new_regi_device_num + VALUES(new_regi_device_num)"
+        val pstat_sql_opera_kpi_day_new_regi_device = conn.prepareStatement(sql_opera_kpi_day_new_regi_device)
+        var ps_opera_kpi_day_new_regi_device_params = new ArrayBuffer[Array[Any]]()
+
+        //2、新增注册帐号数
+        val sql_opera_kpi_day_new_regi_account = "INSERT INTO bi_gamepublic_base_opera_kpi(parent_game_id,child_game_id,publish_date,new_regi_account_num,os,group_id) VALUES (?,?,?,?,?,?) ON DUPLICATE KEY update new_regi_account_num=new_regi_account_num + VALUES(new_regi_account_num)"
+        val pstat_sql_opera_kpi_day_new_regi_account: PreparedStatement = conn.prepareStatement(sql_opera_kpi_day_new_regi_account);
+        var ps_opera_kpi_day_new_regi_account_params = new ArrayBuffer[Array[Any]]()
+
 
 
         //redis 链接

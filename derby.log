@@ -1,7 +1,7 @@
 ----------------------------------------------------------------
-Tue Aug 01 20:25:06 CST 2017:
-Booting Derby version The Apache Software Foundation - Apache Derby - 10.10.2.0 - (1582446): instance a816c00e-015d-9dc1-bd79-000037b32930 
-on database directory /tmp/spark-379deaa1-1dc5-415c-b6cb-4668b1bae6c6/metastore with class loader sun.misc.Launcher$AppClassLoader@4322394 
+Wed Aug 02 11:10:05 CST 2017:
+Booting Derby version The Apache Software Foundation - Apache Derby - 10.10.2.0 - (1582446): instance a816c00e-015d-a0eb-f68d-00003c91fcd8 
+on database directory /tmp/spark-375249b3-9f40-41a0-bcb9-44244e10b05b/metastore with class loader sun.misc.Launcher$AppClassLoader@4322394 
 Loaded from file:/home/bigdata/.m2/repository/org/apache/derby/derby/10.10.2.0/derby-10.10.2.0.jar
 java.vendor=Oracle Corporation
 java.runtime.version=1.7.0_79-b15
