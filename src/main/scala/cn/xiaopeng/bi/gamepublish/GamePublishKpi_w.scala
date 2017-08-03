@@ -14,18 +14,18 @@ import org.apache.spark.streaming.{Seconds, StreamingContext}
   * Created by bigdata on 17-8-1.
   * 1、实时注册，登录统计
   */
-object GamePublishKpi {
+object GamePublishKpi_w {
   var arg = "600"
 
   def main(args: Array[String]): Unit = {
-//    Logger.getLogger("org.apache.spark").setLevel(Level.WARN)
-//    Logger.getLogger("org.eclipse.jetty.server").setLevel(Level.OFF)
+    //    Logger.getLogger("org.apache.spark").setLevel(Level.WARN)
+    //    Logger.getLogger("org.eclipse.jetty.server").setLevel(Level.OFF)
     if (args.length == 1) {
       arg = args(0)
     }
 
     //生产环境需要checkpoint  这个方法，在程序运行的过程中挂了，重新启动之后 会先去 checkpoint ，没有 再创建ssc
-//    val ssc = StreamingContext.getOrCreate(ConfigurationUtil.getProperty("spark.checkpoint.kpi"), getStreamingContext _);
+    //    val ssc = StreamingContext.getOrCreate(ConfigurationUtil.getProperty("spark.checkpoint.kpi"), getStreamingContext _);
 
     //测试环境不许要checkpoint
     val ssc = getStreamingContext
@@ -54,24 +54,23 @@ object GamePublishKpi {
     val dsLogs: DStream[String] = KafkaUtils.createDirectStream[String, String, StringDecoder, StringDecoder](ssc, kafkaParams, topicsSet).map(_._2)
     dsLogs.print()
     dsLogs.foreachRDD(rdd => {
-      if(rdd.count()>0)
-        {
-          //打印
-          rdd.foreach(println(_))
-          val sc = rdd.sparkContext
-          val hiveContext = HiveContextSingleton.getInstance(sc)
+      if (rdd.count() > 0) {
+        //打印
+        rdd.foreach(println(_))
+        val sc = rdd.sparkContext
+        val hiveContext = HiveContextSingleton.getInstance(sc)
 
-          //基本维度信息
-          PublicFxGgameTbPush2Redis.publicGgameTbPush2Redis()
-          //把以前的日志 bi_pubgame 和本次实时的日志  bi_pubgame  相加
-          StreamingUtils.convertPubGameLogsToDfTmpTable(rdd, hiveContext)
-          //处理注册日志
-          GamePublicRegiUtil.loadRegiInfo(rdd, hiveContext)
-          //处理激活日志
-//          GamePublicActiveUtil.loadActiveInfo()
-          //处理登录数据
-          GamePublic
-        }
+        //基本维度信息
+        PublicFxGgameTbPush2Redis.publicGgameTbPush2Redis()
+        //把以前的日志 bi_pubgame 和本次实时的日志  bi_pubgame  相加
+        StreamingUtils.convertPubGameLogsToDfTmpTable(rdd, hiveContext)
+        //处理注册日志
+        GamePublicRegiUtil.loadRegiInfo(rdd, hiveContext)
+        //处理激活日志
+        //        GamePublicActiveUtil.loadActiveInfo(rdd, hiveContext)
+        //处理登录数据
+        //
+      }
     })
 
     //测试环境不许要checkpoint

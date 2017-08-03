@@ -33,9 +33,10 @@ object JdbcUtil {
 
   /**
     * 发行业务库连接
+    *
     * @return
     */
-  def getXiaopeng2FXConn():Connection={
+  def getXiaopeng2FXConn(): Connection = {
     val url = ConfigurationUtil.getProperty(Constants.JDBC_XIAOPENG2FX_URL)
     val driver = ConfigurationUtil.getProperty(Constants.JDBC_DRIVER)
     try {
@@ -69,10 +70,10 @@ object JdbcUtil {
     if (params.length > 0) {
       val pstat = conn.prepareStatement(sqlText)
       pstat.clearBatch()
-      //params是一个ArrayBuffer，里面装的是Array，每个Array里面装的是每一条的记录，有15个字段
+      //
       for (param <- params) {
         for (index <- 0 to param.length - 1) {
-          //给sql中的？设置值，这是sql注入的专门用法
+          //
           pstat.setObject(index + 1, param(index))
         }
         pstat.addBatch()
@@ -105,9 +106,8 @@ object JdbcUtil {
     if (params.length > 0) {
       for (param <- params) {
         for (index <- 0 to param.length - 1) {
-          pstat.setObject(index + 1, params(index))
+          pstat.setObject(index + 1, param(index))
         }
-
         pstat.executeUpdate()
       }
       params.clear

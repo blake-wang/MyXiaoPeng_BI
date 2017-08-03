@@ -91,6 +91,37 @@ object GamePublishActs2 {
           //小时表使用指标
           val tu14 = new Tuple14(publish_time, parent_game_id, game_id, medium_channel, ad_site_channel, pkg_code, medium_account, promotion_channel
             , promotion_mode, head_people, os, group_id, isLoginAccountHour, game_account)
+
+          //---发行三期数据部分指标---
+
+          //是否为新增注册设备
+          val isNewRegiDevDay2 = GamePublicDao2.isNewRegiDevDay(imei, publish_date,  game_id, conn)
+          //是否为当日注册帐号，并且与注册的渠道一致
+          val isNewRegiAccountDay2 = GamePublicDao2.isNewRegiAccountDay(game_account, publish_date, isNewRegiDevDay2,imei, jedis0)
+          //判断是否设备有记录，若有记录则为0，否则为1
+          val isNewLgDev2 = GamePublicDao2.isNewLgDevDay(imei, publish_date,game_id, isNewRegiDevDay2,isNewRegiAccountDay2, jedis3)
+          val isNewLgAccount2 = GamePublicDao2.isNewLgAccountDay(game_account, publish_date,game_id, isNewRegiDevDay2, isNewRegiAccountDay2, jedis3)
+          //是否设备当天已经登录，若已经登录为0
+          val isLoginDevDay2 = GamePublicDao2.isLoginDevDay(imei, publish_date,game_id, jedis3)
+          //设置data to tupel16  按日期
+          val tp10 = new Tuple10(publish_date, parent_game_id, game_id,os, group_id,
+            isNewLgDev2, isNewLgAccount2, isLoginDevDay2, imei, game_account)
+
+          //调用函数对数据进行加载
+          try {
+            GamePublicDao.loginActionsByDayProcessDB(tp19, conn, pkgid)//发行二期基础表
+            GamePublicDao.loginAccountByDayProcessDB(tp19,conn)  //日活跃
+            GamePublicDao.loginAccountDauByHourProcessDB(tu14,conn,pkgid)//小时表
+            GamePublicDao2.loginActionsByDayProcessDB(tp10,conn) //发行三期基础表
+            //缓存一下数据，避免重复计算
+            //对本小时第一次登录的记录到redis
+            jedis3.set("isLoginAccountHour|" + tu14._1 + "|" + tu14._14 + "|" + pkgid+"|"+tu14._3.toString, tu14._6)
+            jedis3.expire("isLoginAccountHour|" + tu14._1 + "|" + tu14._14 + "|" + pkgid+"|"+tu14._3.toString, 3600 * 8)
+
+          } catch {
+            case e:Exception => e.printStackTrace()
+          }
+
         }
       }
     }
