@@ -85,6 +85,4 @@ object Commons {
     stmt.close()
     return jg
   }
-
-
 }
