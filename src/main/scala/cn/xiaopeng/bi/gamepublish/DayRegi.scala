@@ -121,7 +121,6 @@ object DayRegi {
 
       //按小时去重   --想一想，为什么这里要把hive中的历史数据全部取出来
       hiveContext.sql("use yyft");
-      println("select distinct\nlastPubGame.child_game_id as child_game_id,\nrz.parent_channel as parent_channel,\nrz.child_channel as child_channel,\nrz.ad_label as ad_label,\nrz.reg_time as reg_time,\nrz.imei as imei,\nrz.count_acc as count_acc\nfrom\n(select distinct game_id,parent_channel,child_channel,ad_label,imei,count(distinct game_account) count_acc,substr(min(reg_time),0,13) as reg_time from\nods_regi_rz_cache where game_account is not null and game_account != '' group by game_id,parent_channel,child_channel,ad_label,imei,to_date(reg_time)) rz join (select distinct game_id as child_game_id from lastPubGame) lastPubGame on rz.game_id = lastPubGame.child_game_id")
       val sql_bi_regi_Hour = "select distinct\nlastPubGame.child_game_id as child_game_id,\nrz.parent_channel as parent_channel,\nrz.child_channel as child_channel,\nrz.ad_label as ad_label,\nrz.reg_time as reg_time,\nrz.imei as imei,\nrz.count_acc as count_acc\nfrom\n(select distinct game_id,parent_channel,child_channel,ad_label,imei,count(distinct game_account) count_acc,substr(min(reg_time),0,13) as reg_time from\nods_regi_rz_cache where game_account is not null and game_account != '' group by game_id,parent_channel,child_channel,ad_label,imei,to_date(reg_time)) rz join (select distinct game_id as child_game_id from lastPubGame) lastPubGame on rz.game_id = lastPubGame.child_game_id"
       val df_bi_regi_Hour: DataFrame = hiveContext.sql(sql_bi_regi_Hour);
 
@@ -132,35 +131,6 @@ object DayRegi {
     }
   }
 
-  //从expand_channel 中 拆分出parent_channel,child_channel,ad_label
-  def getArrayChannel(channelId: String): Array[String] = {
-    val channelArr = channelId.split("_")
-    if (channelId == null || channelId.equals("") || channelId.equals("0")) {
-      Array[String]("21", "", "")
-    } else if (channelArr.length < 3) {
-      Array[String](channelId, "", "")
-    } else {
-      Array[String](channelArr(0), channelArr(1), channelArr(2))
-    }
-  }
-
-  //取出redis中的数据
-  def getRedisValue(game_id: Int, pkg_code: String, order_date: String, jedis: Jedis, connFX: Connection): Array[String] = {
-    var parent_game_id = jedis.hget(game_id.toString + "_publish_game", "mainid")
-    if (parent_game_id == null) parent_game_id = "0"
-    var medium_account = jedis.hget(pkg_code + "_pkgcode", "medium_account")
-    if (medium_account == null) medium_account = ""
-    var promotion_channel = jedis.hget(pkg_code + "_pkgcode", "promotion_channel")
-    if (promotion_channel == null) promotion_channel = ""
-    var promotion_mode = jedis.hget(pkg_code + "_" + order_date + "_pkgcode", "promotion_mode")
-    if (promotion_mode == null) promotion_mode = ""
-    var head_people = jedis.hget(pkg_code + "_" + order_date + "_pkgcode", "head_people")
-    if (head_people == null) head_people = ""
-    val groupid = Commons.getPubGameGroupIdAndOs(game_id, connFX)(0)
-    val os = Commons.getPubGameGroupIdAndOs(game_id, connFX)(1)
-
-    return Array[String](parent_game_id, os, medium_account, promotion_channel, promotion_mode, head_people, groupid)
-  }
 
   def foreachRegiDataFrame(regiDataFrame: DataFrame) = {
     //遍历每一个分区
@@ -179,7 +149,7 @@ object DayRegi {
 
         //一、投放报表：
 
-        //1、更新明细表   按小时去重
+        //1、更新明细表   按小时去重  -------注册有明细表 ，登录没有明细表
         val detail_regi = "INSERT INTO bi_gamepublic_regi_detail(game_id,parent_channel,child_channel,ad_label,regi_hour,imei) VALUES (?,?,?,?,?,?)"
         val pstmt_detail_regi = conn.prepareStatement(detail_regi)
         val detail_regi_params = new ArrayBuffer[Array[Any]]()
@@ -300,6 +270,36 @@ object DayRegi {
 
   }
 
+  //从expand_channel 中 拆分出parent_channel,child_channel,ad_label
+  def getArrayChannel(channelId: String): Array[String] = {
+    val channelArr = channelId.split("_")
+    if (channelId == null || channelId.equals("") || channelId.equals("0")) {
+      Array[String]("21", "", "")
+    } else if (channelArr.length < 3) {
+      Array[String](channelId, "", "")
+    } else {
+      Array[String](channelArr(0), channelArr(1), channelArr(2))
+    }
+  }
+
+  //取出redis中的数据
+  def getRedisValue(game_id:Int,pkg_code:String,order_date:String,jedis:Jedis,connFx:Connection) = {
+    var parent_game_id = jedis.hget(game_id.toString + "_publish_game", "mainid")
+    if(parent_game_id==null) parent_game_id="0"
+    var medium_account =jedis.hget(pkg_code+"_pkgcode","medium_account")
+    if(medium_account==null) medium_account=""
+    var promotion_channel = jedis.hget(pkg_code+"_pkgcode","promotion_channel")
+    if(promotion_channel==null) promotion_channel=""
+    var promotion_mode =jedis.hget(pkg_code+ "_" + order_date+"_pkgcode","promotion_mode")
+    if(promotion_mode==null) promotion_mode=""
+    var head_people =jedis.hget(pkg_code+ "_" + order_date+"_pkgcode","head_people")
+    if(head_people==null) head_people=""
+    val os =Commons.getPubGameGroupIdAndOs(game_id,connFx)(1)
+    val groupid =Commons.getPubGameGroupIdAndOs(game_id,connFx)(0)
+
+    Array[String](parent_game_id,os,medium_account,promotion_channel,promotion_mode,head_people,groupid)
+  }
+
 
   def executeUpdate(pstat: PreparedStatement, params: ArrayBuffer[Array[Any]], conn: Connection): Unit = {
     if (params.length > 0) {
@@ -311,6 +311,5 @@ object DayRegi {
       }
       params.clear()
     }
-
   }
 }
