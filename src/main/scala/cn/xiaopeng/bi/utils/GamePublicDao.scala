@@ -213,24 +213,24 @@ object GamePublicDao {
       ps.setString(11, tu14._11) //0s
       ps.setInt(12, tu14._12) //group_id
       ps.setInt(13, tu14._13) //dau_account_num
-      ps.setInt(14, tu14._13) //dau_account_num
+      ps.setInt(14, tu14._13) //dau_acc                         ount_num
       ps.executeUpdate()
     }
     ps.close()
   }
 
   //把登录数据进行打标记存放
-  def loginInfoToMidTb(gameAccount: String, publicDate: String, pkgCode: String, imei: String, isNewLgDev: Int, isNewLgAccount: Int, pkgid: String, gameId: Int, jedis: Jedis)={
+  def loginInfoToMidTb(gameAccount: String, publicDate: String, pkgCode: String, imei: String, isNewLgDev: Int, isNewLgAccount: Int, pkgid: String, gameId: Int, jedis: Jedis) = {
     //jedis.select(3)
     //是否新设备判断是否进一步操作
-    if(isNewLgDev ==1){
+    if (isNewLgDev == 1) {
       //插入当天新增登录设备到redis，用来判断是否新增活跃设备
       jedis.set("isNewLgDev|" + publicDate + "|" + imei + "|" + pkgid + "|" + gameId.toString, "1")
       jedis.expire("isNewLgDev|" + publicDate + "|" + imei + "|" + pkgid + "|" + gameId.toString, 3600 * 50)
     }
     //临时存储帐号是否今天登录过
-    if(!jedis.exists("isLoginAccountDay|" + publicDate + "|" + gameAccount + "|" + pkgid + "|" + gameId.toString)){
-//      jedis.set
+    if (!jedis.exists("isLoginAccountDay|" + publicDate + "|" + gameAccount + "|" + pkgid + "|" + gameId.toString)) {
+      //      jedis.set
     }
   }
 

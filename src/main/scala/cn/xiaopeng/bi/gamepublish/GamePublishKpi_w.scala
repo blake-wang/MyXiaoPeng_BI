@@ -61,7 +61,7 @@ object GamePublishKpi_w {
         val hiveContext = HiveContextSingleton.getInstance(sc)
 
         //基本维度信息
-//        PublicFxGgameTbPush2Redis.publicGgameTbPush2Redis()
+        PublicFxGgameTbPush2Redis.publicGameTbPush2Redis()
         //把以前的日志 bi_pubgame 和本次实时的日志  bi_pubgame  相加
         StreamingUtils.convertPubGameLogsToDfTmpTable(rdd, hiveContext)
         //处理注册日志

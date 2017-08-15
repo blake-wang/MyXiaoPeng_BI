@@ -2,6 +2,7 @@ package cn.xiaopeng.bi.gamepublish
 
 import java.sql.{Connection, PreparedStatement}
 
+
 import cn.xiaopeng.bi.utils.{Commons, JdbcUtil, JedisPoolSingleton, StringUtils}
 import kafka.serializer.StringDecoder
 import org.apache.spark.rdd.RDD
@@ -17,11 +18,11 @@ import redis.clients.jedis.{Jedis, JedisPool}
 import scala.collection.mutable.ArrayBuffer
 
 /**
-  * Created by bigdata on 17-8-3.
+  * Created by bigdata on 17-8-6.
   *
-  * 在第一版的基础上，增加redis读取数据和增加唯独数据
+  * 投放报表  login
   */
-object DayLoginDevNum_two {
+object DayLoginKpi {
   var arg = "60"
 
   def main(args: Array[String]): Unit = {
@@ -51,26 +52,25 @@ object DayLoginDevNum_two {
       val sc = rdd.sparkContext
       val sqlContext = new HiveContext(sc)
 
-      dayDevNumber(rdd, sqlContext)
+      //执行处理逻辑
+      baseDayLoginKpi(rdd, sqlContext)
     })
     ssc
   }
 
 
-  def dayDevNumber(loginRdd: RDD[String], hiveContext: HiveContext) = {
+  def baseDayLoginKpi(loginRdd: RDD[String], hiveContext: HiveContext) = {
     //过滤并生成新的rdd
     val rdd = loginRdd.filter(row => {
       val fields = row.split("\\|")
-      fields(0).contains("bi_login") && fields.length > 8
+      fields(0).contains("bi_login") && fields.length >= 8
     }).map(row => {
-      //打印
-      println(row)
 
       val fields = row.split("\\|")
       //从日志中取出字段 game_account(3),login_time(4),game_id(8),expand_channel(6),imei(7)
 
       //重新包装成Row
-      //      game_account(0),    login_time(1), game_id(2),     parent_channel(3),             child_channel(4),               pkg_code(6),                    imei(6)
+      //      game_account(0),    login_time(1), game_id(2),     parent_channel(3),             child_channel(4),               ad_label(6),                    imei(6)
       Row(fields(3).trim.toLowerCase, fields(4), fields(8).toInt, getArrayChannel(fields(6))(0), getArrayChannel(fields(6))(1), getArrayChannel(fields(6))(2), fields(7))
     })
 
@@ -94,6 +94,8 @@ object DayLoginDevNum_two {
       val df_bi_login_hour = hiveContext.sql(sql_bi_login_hour)
 
       foreachLoginDataFrame(df_bi_login_hour)
+
+      JedisPoolSingleton.destroy()
     }
   }
 
@@ -106,20 +108,20 @@ object DayLoginDevNum_two {
         //获取数据库的连接
         val conn = JdbcUtil.getConn()
         val stmt = conn.createStatement()
-        val connFx: Connection = JdbcUtil.getXiaopeng2FXConn()
-        //jedis
+        val connFx = JdbcUtil.getXiaopeng2FXConn()
+        //redis 0号库中存的是基本维度信息
         val pool: JedisPool = JedisPoolSingleton.getJedisPool
-        val jedis: Jedis = pool.getResource
+        val jedis = pool.getResource
         jedis.select(0)
 
         //一、投放报表：
 
-        //1、投放日表 bi_gamepublic_base_day_kpi  dau_device_num
+        //1、投放日表 bi_gamepublic_base_day_kpi DAU设备数  dau_device_num
         val day_dau_device_num = "INSERT INTO bi_gamepublic_base_day_kpi(parent_game_id,child_game_id,medium_channel,ad_site_channel,pkg_code,publish_date,dau_device_num) VALUES (?,?,?,?,?,?,?) ON DUPLICATE KEY update os=?,group_id=?,medium_account=?,promotion_channel=?,promotion_mode=?,head_people=?,dau_device_num=dau_device_num + VALUES(dau_device_num)"
         val pstmt_day_dau_device_num = conn.prepareStatement(day_dau_device_num)
         var day_dau_device_num_params = new ArrayBuffer[Array[Any]]()
 
-        //2、投放日表 bi_gamepublic_base_day_kpi  dau_account_num
+        //2、投放日表 bi_gamepublic_base_day_kpi DAU帐号数  dau_account_num
         val day_dau_account_num = "INSERT INTO bi_gamepublic_base_day_kpi(parent_game_id,child_game_id,medium_channel,ad_site_channel,pkg_code,publish_date,dau_account_num) VALUES (?,?,?,?,?,?,?) ON DUPLICATE KEY update os=?,group_id=?,medium_account=?,promotion_channel=?,promotion_mode=?,head_people=?,dau_account_num=dau_account_num + VALUES(dau_account_num)"
         val pstmt_day_dau_account_num = conn.prepareStatement(day_dau_account_num)
         var day_dau_account_num_params = new ArrayBuffer[Array[Any]]()
@@ -145,7 +147,7 @@ object DayLoginDevNum_two {
           val login_time = row.getAs[String]("login_time")
           val game_account_num = row.getAs[String]("count_acc")
 
-          //拿出jedis中的数据
+          //拿出jedis中的发行基本维度数据
           val redisValue = getRedisValue(child_game_id, ad_label, login_time, jedis, connFx)
           val parent_game_id = redisValue(0)
           val os = redisValue(1)
@@ -155,7 +157,7 @@ object DayLoginDevNum_two {
           val head_people = redisValue(5)
           val group_id = redisValue(6)
 
-          //1、查询注册明细表，获取最早的注册时间
+          //1、查询注册明细表，获取设备最早的注册时间
           val select_first_regi = "select left(regi_hour,10) as publish_date from bi_gamepublic_regi_detail where ad_label='" + ad_label + "' and imei='" + imei + "' and parent_channel='" + parent_channel + "' and child_channel='" + child_channel + "' and game_id='" + child_game_id + "' and order by regi_hour asc limit 1"
           val result_first_regi = stmt.executeQuery(select_first_regi)
           if (result_first_regi.next()) {
@@ -170,7 +172,7 @@ object DayLoginDevNum_two {
               day_new_login_account_num_params.+=(Array[Any](parent_game_id, child_game_id, parent_channel, child_channel, ad_label,
                 login_time.substring(0, 10), game_account_num, os, group_id,
                 medium_account, promotion_channel, promotion_mode, head_people))
-            }else{
+            } else {
               //第一次注册时间是今天以前
               //登录设备数 dau_device_num = dau_device_num + 1
               day_dau_device_num_params.+=(Array[Any](parent_game_id, child_game_id, parent_channel,
@@ -183,9 +185,20 @@ object DayLoginDevNum_two {
                 os, group_id, medium_account, promotion_channel, promotion_mode, head_people))
             }
           }
+
+          //数据插入数据库
+          executeUpdate(pstmt_day_dau_device_num, day_dau_device_num_params, conn) //投放日表,dau_device_num
+          executeUpdate(pstmt_day_dau_account_num, day_dau_account_num_params, conn) //投放日表，dau_account_num
+          executeUpdate(pstmt_day_new_login_device_num, day_new_login_device_num_params, conn) //投放日表，新增登录设备数
+          executeUpdate(pstmt_day_new_login_account_num, day_new_login_account_num_params, conn) //投放日表，新增登录帐号数
         })
-
-
+        stmt.close()
+        pstmt_day_dau_device_num.close()
+        pstmt_day_dau_account_num.close()
+        pstmt_day_new_login_device_num.close()
+        pstmt_day_new_login_account_num.close()
+        conn.close()
+        connFx.close()
       }
     })
   }

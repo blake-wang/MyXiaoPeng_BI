@@ -20,7 +20,7 @@ import scala.collection.mutable.ArrayBuffer
 /**
   * Created by bigdata on 17-8-3.
   */
-object DayRegi {
+object DayRegiKpi {
   var arg = "60"
 
   def main(args: Array[String]): Unit = {
@@ -206,6 +206,7 @@ object DayRegi {
             val result_today_regi = stmt.executeQuery(select_today_regi)
             //判断是否今天注册过   按天去重
             if (!result_today_regi.next()) {
+              //今天没有注册过
               // 注册详情表  bi_gamepublic_regi_detail
               detail_regi_params.+=(Array[Any](child_game_id, parent_channel, child_channel, ad_label, publish_time, imei))
 
