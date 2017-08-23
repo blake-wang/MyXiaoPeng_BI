@@ -1,4 +1,4 @@
-package testdemo
+package testdemo.string
 
 /**
   * Created by bigdata on 17-8-2.

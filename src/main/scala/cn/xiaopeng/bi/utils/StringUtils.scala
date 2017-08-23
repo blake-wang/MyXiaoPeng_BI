@@ -11,16 +11,30 @@ object StringUtils {
 
   val  mode=  ConfigurationUtil.getProperty("web.url.mode");
 
-  def isNumber(str: String): Boolean = {
-    if (str.equals("")) {
+//  def isNumber(str: String): Boolean = {
+//    if (str.equals("")) {
+//      return false;
+//    }
+//    for (i <- 0.to(str.length - 1)) {
+//      if (!Character.isDigit(str.charAt(i))) {
+//        return false;
+//      }
+//    }
+//    return true;
+//  }
+
+  //判断一个字符串是数字
+  def isNumber(str:String):Boolean={
+    if(str.equals("")){
       return false;
     }
-    for (i <- 0.to(str.length - 1)) {
-      if (!Character.isDigit(str.charAt(i))) {
-        return false;
+    for(i<-0.to(str.length -1)){
+      //判断字符是否是数字
+      if(!Character.isDigit(str.charAt(i))){
+          return false
       }
     }
-    return true;
+    return true
   }
 
   def isTime(str: String): Boolean = {

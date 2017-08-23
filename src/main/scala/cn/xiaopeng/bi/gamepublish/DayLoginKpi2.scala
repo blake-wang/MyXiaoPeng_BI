@@ -4,7 +4,7 @@ import java.sql.Struct
 import javax.security.auth.login.Configuration
 
 import cn.wanglei.bi.ConfigurationUtil
-import cn.xiaopeng.bi.utils.SparkUtils
+import cn.xiaopeng.bi.utils.{GameDayLoginUtil, JdbcUtil, SparkUtils}
 import kafka.serializer.StringDecoder
 import org.apache.spark.rdd.RDD
 import org.apache.spark.sql.{DataFrame, Row}
@@ -15,8 +15,17 @@ import org.apache.spark.streaming.kafka.KafkaUtils
 import org.apache.spark.streaming.{Seconds, StreamingContext}
 import org.apache.spark.{SparkConf, SparkContext}
 
+
 /**
   * Created by bigdata on 17-8-15.
+  *
+  * --登录日志 按帐号  按天去重
+  * 每个游戏帐号，每天不管登录多少次，只计算当天第一次登录时间
+  * 一个字段一个字段的去处理，一个一个字段处理的熟练了，再一起去处理多个字段
+  * 每日    登录帐号数
+  * 每日    新增登录帐号数
+  * 每日    登录设备数
+  * 每日    新增登录设备数
   */
 object DayLoginKpi2 {
   var arg = "60"
@@ -26,49 +35,32 @@ object DayLoginKpi2 {
       arg = args(0)
     }
     val conf = new SparkConf().setAppName(this.getClass.getName.replace("$", ""))
+      .set("spark.default.parallelism", "60")
+      .set("spark.serializer", "org.apache.spark.serializer.KryoSerializer")
+      .set("spark.shuffle.consolidateFiles", "true")
+      .set("spark.sql.shuffle.partitions", "60")
+      .setMaster("local[*]")
     val sc = new SparkContext(conf)
-    SparkUtils.setMaster(conf)
     val ssc = new StreamingContext(sc, Seconds(arg.toInt))
-    val kafkaparms = Map[String, String]("metedata.broker.list" -> "master-yyft:9092,slaves01-yyft:9092,slaves02-yyft:9092")
-    val topicSet = "regi,login,order,active,pubgame,channel,request".split(",").toSet
+    val kafkaparms = Map[String, String]("metadata.broker.list" -> "master-yyft:9092,slaves01-yyft:9092,slaves02-yyft:9092")
+    val topicSet = Array("login").toSet
     val dStream: DStream[String] = KafkaUtils.createDirectStream[String, String, StringDecoder, StringDecoder](ssc, kafkaparms, topicSet).map(_._2)
-    //dStream里面是一连串的rdd
+
+    //遍历DStream中的每一个rdd
     dStream.foreachRDD(rdd => {
       val sc = rdd.sparkContext
       val hiveContext = new HiveContext(sc)
 
-      loadLoginInfo(rdd, hiveContext)
+      //每日登录帐号数
+      GameDayLoginUtil.loadLoginInfo(rdd, hiveContext)
+      //每日新增登录帐号数
+      GameDayLoginUtil.loadNewLoginInfo(rdd, hiveContext)
+
     })
+    ssc.start()
+    ssc.awaitTermination()
   }
 
-
-  def loadLoginInfo(rdd: RDD[String], hiveContext: HiveContext): Unit = {
-    val loginRdd = rdd.filter(line => {
-      val fields = line.split("\\|", -1)
-      fields(0).contains("bi_login") && fields.length >= 5
-    }).map(line => {
-      val fields = line.split("\\|", -1)
-      //game_account,login_time,expand_channel,imei,game_id
-      //                        parent_channel,child_channel,pkg_code
-      Row(fields(3), fields(4), getArrayChannel(fields(6))(0), getArrayChannel(fields(6))(1), getArrayChannel(fields(6))(2), fields(7), fields(9))
-    })
-    if (!loginRdd.isEmpty()) {
-      val loginStruct = new StructType()
-        .add("game_account", StringType)
-        .add("login_time", StringType)
-        .add("parent_channel", StringType)
-        .add("child_channel", StringType)
-        .add("ad_label", StringType)
-        .add("imei", StringType)
-        .add("game_id", StringType)
-      val loginRddDf = hiveContext.createDataFrame(loginRdd,loginStruct)
-      loginRddDf.registerTempTable("ods_login")
-
-
-    }
-
-
-  }
 
   def getArrayChannel(channelId: String): Array[String] = {
     val splited = channelId.split("_")
