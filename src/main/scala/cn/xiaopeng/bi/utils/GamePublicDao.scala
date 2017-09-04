@@ -35,6 +35,9 @@ object GamePublicDao {
     ps.close()
     return res
   }
+  //从库中判断是否为新注册设备
+
+
 
   /**
     * 是否当日注册账号
@@ -51,7 +54,6 @@ object GamePublicDao {
     val imei = arr.get("imei")
     if (reg_time == null) {
       val s = MissInfo2Redis.checkAccount(gameAccount)
-
     }
     1
   }

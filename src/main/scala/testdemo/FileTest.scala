@@ -6,6 +6,7 @@ import java.io.File
  * Created by JSJSB-0071 on 2017/7/14.
  */
 object FileTest {
+
   def main(args: Array[String]) {
     val path1 = new File(".").getAbsolutePath
     val path2 = new File(".").getPath
