@@ -7,6 +7,10 @@ import java.io.IOException;
  */
 public class DecodinglogUtil {
 
+    public static void main(String[] args) {
+
+    }
+
     public static String serviceDecode(String base64) throws IOException {
         byte[] data = base64Decode(base64);
         //数据打乱交换
