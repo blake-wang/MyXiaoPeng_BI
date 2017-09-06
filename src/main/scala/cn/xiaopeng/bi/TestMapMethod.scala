@@ -3,8 +3,11 @@ package cn.xiaopeng.bi
 import cn.wanglei.bi.bean.MoneyMasterBean
 import cn.wanglei.bi.utils.AnalysisJsonUtil
 import cn.xiaopeng.bi.utils.{HiveContextSingleton, JdbcUtil, SparkUtils}
+import kafka.serializer.StringDecoder
 import org.apache.spark.rdd.RDD
 import org.apache.spark.sql.hive.HiveContext
+import org.apache.spark.streaming.kafka.KafkaUtils
+import org.apache.spark.streaming.{Seconds, StreamingContext}
 import org.apache.spark.{SparkConf, SparkContext}
 
 /**
@@ -29,16 +32,35 @@ object TestMapMethod {
       .set("spark.sql.shuffle.partitions", "60")
     SparkUtils.setMaster(sparkConf);
     val sparkContext = new SparkContext(sparkConf)
-    val jsonRdd = sparkContext.textFile("file:///home/bigdata/IdeaProjects/MyXiaoPeng_BI/src/test/scala/com/xiaopeng/test/money")
-    //两种方式都可以打印rdd中内容
-    jsonRdd.collect().foreach {
-      println
-    }
-    jsonRdd.take(1).foreach {
-      println
-    }
-    val hiveContext = HiveContextSingleton.getInstance(sparkContext)
-    loadJsonRdd(jsonRdd, hiveContext)
+
+    val ssc = new StreamingContext(sparkContext, Seconds(60))
+    val brokers = "master-yyft:9092,slaves01-yyft:9092,slaves02-yyft:9092"
+    val topicSet = Array("regi").toSet
+    val kafkaParams = Map[String, String]("metadata.broker.list" -> brokers)
+    val message = KafkaUtils.createDirectStream[String, String, StringDecoder, StringDecoder](ssc, kafkaParams, topicSet)
+    val valueDStream = message.map(_._2)
+
+    val newRDD = valueDStream.map(line => {
+      val fields = line.split("\\|", -1)
+      println(fields(0)+" , "+fields(1)+" , "+fields(2)+" , "+fields(3)+" , "+fields(4)+" , "+fields(5)+" , "+fields(6))
+//      fields.foreach {
+//        println
+//      }
+    })
+    ssc.start()
+    ssc.awaitTermination()
+
+
+//    val jsonRdd = sparkContext.textFile("file:///home/bigdata/IdeaProjects/MyXiaoPeng_BI/src/test/scala/com/xiaopeng/test/money")
+//    //两种方式都可以打印rdd中内容
+//    jsonRdd.collect().foreach {
+//      println
+//    }
+//    jsonRdd.take(1).foreach {
+//      println
+//    }
+//    val hiveContext = HiveContextSingleton.getInstance(sparkContext)
+//    loadJsonRdd(jsonRdd, hiveContext)
   }
 
 
