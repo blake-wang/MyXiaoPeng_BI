@@ -185,5 +185,6 @@
     <orderEntry type="library" name="Maven: mysql:mysql-connector-java:5.1.23" level="project" />
     <orderEntry type="library" scope="TEST" name="Maven: junit:junit:4.8.1" level="project" />
     <orderEntry type="library" name="scala-sdk-2.10.4" level="application" />
+    <orderEntry type="library" name="jars" level="project" />
   </component>
 </module>

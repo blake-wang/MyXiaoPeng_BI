@@ -12,6 +12,11 @@ object DateUtils {
   val DATE_FORMAT = new SimpleDateFormat("yyyy-MM-dd")
   val DATEKEY_FORMAT = new SimpleDateFormat("yyyyMMdd")
 
+  def main(args: Array[String]): Unit = {
+    val date = getDate
+    println(date)
+  }
+
 
   /**
     * 判断一个时间是否在另一个时间之前

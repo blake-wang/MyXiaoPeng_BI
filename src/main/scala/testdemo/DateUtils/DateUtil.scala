@@ -1,7 +1,7 @@
 package testdemo.DateUtils
 
 import java.text.SimpleDateFormat
-import java.util.Date
+import java.util.{Calendar, Date}
 
 /**
   * Created by bigdata on 17-8-15.
@@ -16,9 +16,24 @@ object DateUtil {
     val request = "192.168.20.22 - - 29/Aug/2016:10:17:07 +0800 \"GET /h5/ssxy/index.html?p=gdt_lm_00024&g=1 HTTP/1.1\" 304 0 \"-\"\"Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/46.0.2486.0 Safari/537.36 Edge/13.10586\" - tg.pyw.cn test4 - 0.000"
     //    val dateStr = request.split("\\[")(1).split("\\]")(0).split(":")(0).split("/")
 
-    println(getNowFullDate("yyyy-MM-dd HH:mm:ss"))
-    println(getDateForRequest(request))
+//    println(getNowFullDate("yyyy-MM-dd HH:mm:ss"))
+//    println(getDateForRequest(request))
 
+    val date = "2017-09-01 12:36:42"
+    val a = getDt7Before(date,7)
+    println(a)
+
+  }
+
+  //转换时间，2017-09-01 12:36:42   ->  2017-09-08
+  def getDt7Before(pidt: String,i: Int):String ={
+    val dateFormat: SimpleDateFormat = new SimpleDateFormat("yyyy-MM-dd")
+    val cal: Calendar = Calendar.getInstance
+    val date: Date = dateFormat.parse(pidt)
+    cal.setTime(date)
+    cal.add(Calendar.DATE, i)
+    val dt = dateFormat.format(cal.getTime())
+    return dt
   }
 
   /**
@@ -201,4 +216,8 @@ object DateUtil {
       "00"
     }
   }
+
+
+
+
 }

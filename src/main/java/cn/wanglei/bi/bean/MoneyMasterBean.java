@@ -79,4 +79,17 @@ public class MoneyMasterBean {
     public String getTs() {
         return ts;
     }
+
+    @Override
+    public String toString() {
+        return "MoneyMasterBean{" +
+                "ip='" + ip + '\'' +
+                ", imei='" + imei + '\'' +
+                ", pkg_id='" + pkg_id + '\'' +
+                ", adv_name='" + adv_name + '\'' +
+                ", app_id='" + app_id + '\'' +
+                ", game_id='" + game_id + '\'' +
+                ", ts='" + ts + '\'' +
+                '}';
+    }
 }
