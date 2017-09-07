@@ -47,6 +47,7 @@ object TestMapMethod {
 //        println
 //      }
     })
+    newRDD.print()
     ssc.start()
     ssc.awaitTermination()
 
