@@ -4,6 +4,7 @@ import javax.security.auth.login.Configuration
 
 import cn.wanglei.bi.ConfigurationUtil
 import cn.xiaopeng.bi.utils.Hadoop
+import cn.xiaopeng.bi.utils.action.ThirdDataActs
 import kafka.serializer.StringDecoder
 import org.apache.log4j.{Level, Logger}
 import org.apache.spark.streaming.kafka.KafkaUtils
@@ -29,6 +30,8 @@ object GamePublishThirdData {
     Hadoop.hd
     batchInt(args(0).toInt)
     val ssc: StreamingContext = StreamingContext.getOrCreate(checkdir, statActions _)
+    ssc.start()
+    ssc.awaitTermination()
   }
 
   //游戏内部数据
@@ -53,9 +56,12 @@ object GamePublishThirdData {
     //角色数据
     val thirdData = valuesDStream.filter(x => x.contains("bi_thirddata")).filter(x => (!x.contains("bi_adv_money"))) //排除钱大师
       .map(line => line.substring(line.indexOf("{"), line.length))
-    val ownerData = valuesDStream.filter(x=>(!x.contains("bi_thirddata")))
+    val ownerData = valuesDStream.filter(x => (!x.contains("bi_thirddata")))
     //加载陌陌数据
     ThirdDataActs.adClick(thirdData)
+
+    ssc.checkpoint(checkdir)
+    ssc
 
   }
 }
