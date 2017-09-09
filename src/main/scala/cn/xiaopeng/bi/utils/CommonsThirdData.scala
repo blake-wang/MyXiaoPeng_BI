@@ -11,6 +11,78 @@ import redis.clients.jedis.Jedis
   * Created by bigdata on 17-9-8.
   */
 object CommonsThirdData {
+  //注册设备数，一天只能计算一次
+  def isRegiDev(regiDate: String, pkgCode: String, imei: String, topic: String, jedis6: Jedis) = {
+    //默认这个设备已经注册过
+    var jg = 0
+    if(jedis6.exists("regi|"+topic+"|"+pkgCode+"|"+imei+"|"+regiDate)){
+      //如果redis中存在数据，则注册设备数 返回0
+      jg=0
+    }else{
+      jg=1
+      jedis6.set("regi|"+topic+"|"+pkgCode+"|"+imei+"|"+regiDate,topic)
+      jedis6.expire("regi|"+topic+"|"+pkgCode+"|"+imei+"|"+regiDate,1000*3600*48)
+    }
+  }
+
+
+  def regiMatchActive(pkgCode: String, imei: String, dt30before: String, regiTime: String, gameId: Int, os: Int, conn: Connection): Tuple5[Int, String, String, String, String] = {
+    var tp5 = Tuple5(0, "", "", "", "")
+    var adName = 0
+    var ideaId = ""
+    var firstLevel = ""
+    var secondLevel = ""
+    var pkgId = ""
+    var stmt: PreparedStatement = null
+    if (os == 2) {
+      //苹果设备
+      //如果是苹果设备，用imei和gameId 来匹配
+      val sql: String = "select adv_name,pkg_id,idea_id,first_level,second_level from bi_ad_active_o_detail where imei=?  and active_time>? and active_time<=? and game_id=? limit 1"
+      stmt = conn.prepareStatement(sql)
+      stmt.setString(1, imei)
+      stmt.setString(2, dt30before)
+      stmt.setString(3, regiTime)
+      stmt.setInt(4, gameId)
+    } else {
+      //安卓设备
+      val sql: String = "select adv_name,pkg_id,idea_id,first_level,second_level from bi_ad_active_o_detail where imei=? and  pkg_id=? and active_time>? and active_time<=? and game_id=? limit 1"
+      stmt = conn.prepareStatement(sql)
+      stmt.setString(1, imei)
+      stmt.setString(2, pkgCode)
+      stmt.setString(3, dt30before)
+      stmt.setString(4, regiTime)
+      stmt.setInt(5, gameId)
+    }
+    val rs: ResultSet = stmt.executeQuery()
+    while (rs.next()) {
+      ideaId = rs.getString("idea_id")
+      firstLevel = rs.getString("first_level")
+      secondLevel = rs.getString("second_level")
+      adName = rs.getString("adv_name").toInt
+      pkgId = rs.getString("pkg_id")
+    }
+    stmt.close()
+    tp5 = new Tuple5(adName, ideaId, firstLevel, secondLevel, pkgId)
+    return tp5
+  }
+
+
+  //排除imei号为
+  //00000000000000000000000000000000  32个0
+  //000000000000000  15个0
+  //momo  比较特殊，是加密的  5284047f4ffb4e04824a2fd1d1f0cd62
+  def isVadDev(imei: String, os: Int, advName: Int): Boolean = {
+    var jg = true
+    if (imei.replace("-", "").equals("00000000000000000000000000000000") || imei.replace("-", "").equals("000000000000000") || imei.replace("-", "").equals("")) {
+      jg = false
+    }
+    //如果是陌陌，匹配加密,  os=1  是android设备
+    if (os == 1 && advName == 1 && imei.equals("5284047f4ffb4e04824a2fd1d1f0cd62")) {
+      jg = false
+    }
+    return jg
+  }
+
 
   //获取7天前的日期，从今天向前推7天
   def getDt7Before(pidt: String, i: Int): String = {
@@ -47,12 +119,14 @@ object CommonsThirdData {
   }
 
 
-  //检测单击设备数，一天只计算一次
+  //检测单击设备数，一天只计算一次，这里是按设备去重的
   def isClickDev(clickDate: String, pkgCode: String, imei: String, topic: String, jedis6: Jedis): Int = {
     var jg = 0
     if (jedis6.exists("click|" + topic + "|" + pkgCode + "|" + imei + "|" + clickDate)) {
+      //redis中存在，就不加1,这里是按imei去重的
       jg = 0
     } else {
+      //redis中不存在，就加1
       jg = 1
       jedis6.set("click|" + topic + "|" + pkgCode + "|" + imei + "|" + clickDate, topic)
       jedis6.expire("click|" + topic + "|" + pkgCode + "|" + imei + "|" + clickDate, 1000 * 3600 * 48)
@@ -108,9 +182,11 @@ object CommonsThirdData {
   }
 
 
+  //这个原始日志，是点击就会被保存
   //点击记录是否存在
   def isExistClick(pkgCode: String, imei: String, url: String, conn: Connection): Int = {
     var jg = 0
+    //通过 imei 和 pkg_id 以及matched来匹配一条记录
     val sql = "select callback from bi_ad_momo_click where pkg_id=? and imei=? and matched=0 limit 1"
     val stmt = conn.prepareStatement(sql)
     stmt.setString(1, pkgCode)

@@ -154,6 +154,7 @@ object ThirdDataDao {
 
   }
 
+  //插入数据到bi_ad_channel_stats表，如果数据不存在就插入，如果存在，就更新点击数
   def insertClickStat(activeDate: String, gameId: Int, group_id: String, pkgCode: String, head_people: String, medium_account: String, medium: Int, idea_id: String, first_level: String, second_level: String, clicks: Int, clickDevs: Int, conn: Connection) = {
     val sql2Mysql = "insert into bi_ad_channel" +
       "(publish_date,game_id,group_id,pkg_id,head_people,medium_account,medium,idea_id,first_level,second_level,click_num,click_dev_num)" +
