@@ -1,15 +1,13 @@
 package cn.xiaopeng.bi.gamepublish
 
-import javax.security.auth.login.Configuration
-
 import cn.wanglei.bi.ConfigurationUtil
 import cn.xiaopeng.bi.utils.Hadoop
 import cn.xiaopeng.bi.utils.action.ThirdDataActs
 import kafka.serializer.StringDecoder
 import org.apache.log4j.{Level, Logger}
 import org.apache.spark.streaming.kafka.KafkaUtils
-import org.apache.spark.{SparkConf, SparkContext}
 import org.apache.spark.streaming.{Seconds, StreamingContext}
+import org.apache.spark.{SparkConf, SparkContext}
 
 /**
   * Created by bigdata on 17-9-6.
@@ -59,6 +57,9 @@ object GamePublishThirdData {
     val ownerData = valuesDStream.filter(x => (!x.contains("bi_thirddata")))
     //加载陌陌数据
     ThirdDataActs.adClick(thirdData)
+
+    //加载公司自己的数据
+    ThirdDataActs.theOwnerData(ownerData)
 
     ssc.checkpoint(checkdir)
     ssc

@@ -1,13 +1,28 @@
 <component name="libraryTable">
   <library name="jars">
     <CLASSES>
-      <root url="file://$USER_HOME$/jars" />
+      <root url="jar://F:/jars/commons-beanutils-1.9.3.jar!/" />
+      <root url="jar://F:/jars/commons-collections-3.2.1.jar!/" />
+      <root url="jar://F:/jars/commons-lang-2.5.jar!/" />
+      <root url="jar://F:/jars/commons-logging-1.1.1.jar!/" />
+      <root url="jar://F:/jars/commons-pool2-2.4.2.jar!/" />
+      <root url="jar://F:/jars/ezmorph-1.0.6.jar!/" />
+      <root url="jar://F:/jars/fastjson-1.2.35.jar!/" />
+      <root url="jar://F:/jars/fastutil-5.0.9.jar!/" />
+      <root url="jar://F:/jars/GsonFormat.jar!/" />
+      <root url="jar://F:/jars/jedis-2.9.0.jar!/" />
+      <root url="jar://F:/jars/jopt-simple-3.2.jar!/" />
+      <root url="jar://F:/jars/json-lib-2.4-jdk15.jar!/" />
+      <root url="jar://F:/jars/json-serde-1.3.8-jar-with-dependencies.jar!/" />
+      <root url="jar://F:/jars/json-udf-1.3.8-jar-with-dependencies.jar!/" />
+      <root url="jar://F:/jars/mysql-connector-java-5.1.32.jar!/" />
+      <root url="jar://F:/jars/spark-assembly-1.6.1-hadoop2.3.0.jar!/" />
+      <root url="jar://F:/jars/spark-examples-1.6.1-hadoop2.3.0.jar!/" />
+      <root url="jar://F:/jars/spark-streaming-kafka_2.10-1.6.1.jar!/" />
     </CLASSES>
     <JAVADOC />
     <SOURCES>
-      <root url="file://$USER_HOME$/jars" />
+      <root url="jar://F:/jars/spark-assembly-1.6.1-hadoop2.3.0.jar!/" />
     </SOURCES>
-    <jarDirectory url="file://$USER_HOME$/jars" recursive="false" />
-    <jarDirectory url="file://$USER_HOME$/jars" recursive="false" type="SOURCES" />
   </library>
 </component>

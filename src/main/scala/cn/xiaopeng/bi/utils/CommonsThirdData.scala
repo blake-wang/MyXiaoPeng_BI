@@ -1,6 +1,8 @@
 package cn.xiaopeng.bi.utils
 
 import java.sql.{Connection, PreparedStatement, ResultSet}
+import java.text.SimpleDateFormat
+import java.util.{Calendar, Date}
 
 import redis.clients.jedis.Jedis
 
@@ -9,6 +11,41 @@ import redis.clients.jedis.Jedis
   * Created by bigdata on 17-9-8.
   */
 object CommonsThirdData {
+
+  //获取7天前的日期，从今天向前推7天
+  def getDt7Before(pidt: String, i: Int): String = {
+    val dateFormat: SimpleDateFormat = new SimpleDateFormat("yyyy-MM-dd")
+    val cal: Calendar = Calendar.getInstance()
+    val date: Date = dateFormat.parse(pidt)
+    cal.setTime(date)
+    cal.add(Calendar.DATE, i)
+    val dt = dateFormat.format(cal.getTime)
+    return dt
+  }
+
+  //获取原生idfa，带横杠的 -
+  def getYSIdfa(idfa: String): String = {
+    var jg = idfa
+    if (jg.length == 32) {
+      jg = jg.substring(0, 8) + jg.substring(8, 12) + jg.substring(12, 16) + jg.substring(16, 20) + jg.substring(20, 32)
+    }
+    return jg
+
+  }
+
+
+  //获取imei
+  def getImei(imei: String) = {
+    var jg = ""
+    if (imei.contains("&")) {
+      //安卓设备取&符号前面的字段
+      jg = imei.split("&", -1)(0)
+    } else {
+      jg = imei
+    }
+    jg
+  }
+
 
   //检测单击设备数，一天只计算一次
   def isClickDev(clickDate: String, pkgCode: String, imei: String, topic: String, jedis6: Jedis): Int = {
@@ -102,7 +139,7 @@ object CommonsThirdData {
       }
     }
     stmt.close()
-    return jg
+    jg
   }
 
 }
