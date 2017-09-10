@@ -11,17 +11,75 @@ import redis.clients.jedis.Jedis
   * Created by bigdata on 17-9-8.
   */
 object CommonsThirdData {
+
+  //判断是否已经被统计过
+  def isExistStatNewPayAcc(orderDate: String, gameAccount: String, jedis6: Jedis): Int = {
+    var jg = 0
+    if (jedis6.exists("isExistStatNewPayAcc|" + orderDate + "|" + gameAccount)) {
+      jg = 0
+    } else {
+      jg = 1
+      jedis6.set("isExistStatNewPayAcc|" + orderDate + "|" + gameAccount, gameAccount)
+      jedis6.expire(gameAccount, 1000 * 3600 * 48)
+    }
+    return jg
+  }
+
+  //判断是否已经付费帐号被统计过
+  def isExistStatPayAcc(orderDate: String, gameAccount: String, jedis6: Jedis): Int = {
+    var jg = 0
+    if (jedis6.exists("isExistStatPayAcc|" + orderDate + "|" + gameAccount)) {
+      //redis中存在记录
+      jg = 0
+    } else {
+      //redis中不存在记录
+      jg = 1
+      jedis6.set("isExistStatPayAcc|" + orderDate + "|" + gameAccount, gameAccount)
+      jedis6.expire(gameAccount, 1000 * 3600 * 48)
+    }
+    return jg
+  }
+
+
+  //获取游戏帐号信息
+  def getAccountInfo(gameAccount: String, conn: Connection): Tuple6[String, String, Int, String, String, String] = {
+    var tp6 = Tuple6("", "", 0, "", "", "")
+    //pkg,date,adid
+    var regiDate = "0000-00-00"
+    var adName = 0
+    var pkgId = ""
+    var ideaId = ""
+    var firstLevel = ""
+    var secondLevel = ""
+    var ps: PreparedStatement = null
+    val instSql = "select pkg_id,regi_time,adv_name,idea_id,first_level,second_level from bi_ad_regi_o_detail where game_account=? limit 1"
+    ps = conn.prepareStatement(instSql)
+    ps.setString(1, gameAccount)
+    val rs = ps.executeQuery()
+    while (rs.next()) {
+      println("订单匹配帐号成功:" + gameAccount)
+      pkgId = rs.getString("pkg_id")
+      adName = rs.getString("adv_name").toInt
+      regiDate = rs.getString("regi_time")
+      ideaId = rs.getString("idea_id")
+      firstLevel = rs.getString("first_level")
+      secondLevel = rs.getString("second_level")
+    }
+    tp6 = new Tuple6(pkgId, regiDate, adName, ideaId, firstLevel, secondLevel)
+    return tp6
+  }
+
   //注册设备数，一天只能计算一次
-  def isRegiDev(regiDate: String, pkgCode: String, imei: String, topic: String, jedis6: Jedis) = {
+  def isRegiDev(regiDate: String, pkgCode: String, imei: String, topic: String, jedis6: Jedis): Int = {
     //默认这个设备已经注册过
     var jg = 0
-    if(jedis6.exists("regi|"+topic+"|"+pkgCode+"|"+imei+"|"+regiDate)){
+    if (jedis6.exists("regi|" + topic + "|" + pkgCode + "|" + imei + "|" + regiDate)) {
       //如果redis中存在数据，则注册设备数 返回0
-      jg=0
-    }else{
-      jg=1
-      jedis6.set("regi|"+topic+"|"+pkgCode+"|"+imei+"|"+regiDate,topic)
-      jedis6.expire("regi|"+topic+"|"+pkgCode+"|"+imei+"|"+regiDate,1000*3600*48)
+      jg = 0
+    } else {
+      jg = 1
+      jedis6.set("regi|" + topic + "|" + pkgCode + "|" + imei + "|" + regiDate, topic)
+      jedis6.expire("regi|" + topic + "|" + pkgCode + "|" + imei + "|" + regiDate, 1000 * 3600 * 48)
     }
   }
 

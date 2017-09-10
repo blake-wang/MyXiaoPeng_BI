@@ -4,7 +4,7 @@ import java.text.SimpleDateFormat
 import java.util.Date
 
 import cn.xiaopeng.bi.utils.dao.ThirdDataDao
-import cn.xiaopeng.bi.utils.{CommonsThirdData, JdbcUtil, JedisUtil, StringUtils}
+import cn.xiaopeng.bi.utils._
 import net.sf.json.JSONObject
 import org.apache.spark.streaming.dstream.DStream
 import redis.clients.jedis.JedisPool
@@ -33,7 +33,8 @@ object ThirdDataActs {
             //安卓设备取&最前面部分，苹果设备直接是32位idfa
             var imei = CommonsThirdData.getImei(line._4)
             //取出分包id                                           --这里只有android设备才匹配这个，设备匹配这个没有意义
-            var pkgCode = StringUtils.getArrayChannel(line._3)(2) //取出这个，只是为了匹配按着设备
+            var pkgCode = StringUtils.getArrayChannel(line._3)(2)
+            //取出这个，只是为了匹配按着设备
             //取出激活时间 2017-09-09 00:00:00
             val dt = line._5
             val os = if (line._6.toLowerCase.equals("ios")) {
@@ -141,9 +142,9 @@ object ThirdDataActs {
                 val head_people = redisValue(5)
                 val idea_id = matched._2
                 val first_level = matched._3
-                val second_level=matched._4
-                val regiNum =1
-                val topic = medium match{
+                val second_level = matched._4
+                val regiNum = 1
+                val topic = medium match {
                   case 1 => "momo"
                   case 2 => "baidu"
                   case 3 => "jinritoutiao"
@@ -153,13 +154,90 @@ object ThirdDataActs {
                   case 0 => "pyw"
                 }
                 //在redis中做匹配 ，匹配维度为  topic+pkgCode+imei+regiDate
-                val regiDev = CommonsThirdData.isRegiDev(regiDate,pkgCode,imei,topic,jedis6)
-
+                val regiDev = CommonsThirdData.isRegiDev(regiDate, pkgCode, imei, topic, jedis6)
+                //注册统计
+                ThirdDataDao.insertRegiStat(regiDate, gameId, group_id, pkgCode, head_people, medium_account, medium, idea_id, first_level, second_level, regiNum, regiDev, conn)
+                //写入广告监测平台注册明细
+                ThirdDataDao.insertRegiDetail(regiTime, imei, pkgCode, medium, gameId, os, gameAccount, conn)
               }
             }
           }
         })
+        pool.returnBrokenResource(jedis)
+        pool.returnResource(jedis6)
+        pool.destroy()
+        conn.close()
+        connFx.close()
+      })
+      rdd.unpersist()
+    })
+  }
 
+  //消费匹配
+  def orderMatchRegi(dataOrder: DStream[(String, String, String, String, Float, String)]) = {
+    dataOrder.foreachRDD(rdd => {
+      rdd.cache()
+      rdd.foreachPartition(part => {
+        val pool: JedisPool = JedisUtil.getJedisPool
+        val jedis = pool.getResource
+        val jedis6 = pool.getResource
+        jedis6.select(6)
+        val conn = JdbcUtil.getConn()
+        val connFx = JdbcUtil.getXiaopeng2FXConn()
+        part.foreach(line => {
+          val gameId = line._4.toInt
+          //有广告监控(投放)的游戏才统计
+          if (CommonsThirdData.isNeedStaGameId(gameId, conn)) {
+            val imei = CommonsThirdData.getImei(line._6)
+            if (CommonsThirdData.isVadDev(imei, 2, 2)) {
+              val gameAccount = line._1
+              val orderTime = line._3
+              val orderDate = orderTime.substring(0, 10)
+              //先查询一次bi_ad_regi_o_detail，通过帐号信息，查询到其他信息，
+              //能有订单日志，那肯定是存在与注册日志的
+              //pkgcode regidate adv_name
+              val accountInfo = CommonsThirdData.getAccountInfo(gameAccount, conn)
+              val adName = accountInfo._3
+              val pkgCode = accountInfo._1
+              val regiDate = accountInfo._2.substring(0, 10)
+              //若能匹配得到则要计算设备统计数据，并且写入激活明细表，计算注册时使用
+              if (accountInfo._3 >= 1 && (!pkgCode.equals(""))) {
+                val redisValue: Array[String] = CommonsThirdData.getRedisValue(gameId, pkgCode, orderDate, jedis, connFx)
+                val medium = adName
+                val group_id = redisValue(6)
+                val medium_account = redisValue(2)
+                val head_people = redisValue(5)
+                val idea_id = accountInfo._4
+                val first_level = accountInfo._5
+                val second_level = accountInfo._6
+                //计算是否新增帐号， 如果注册日期等于订单日期
+                val isNewPayAcc = if (regiDate.equals(orderDate)) 1 else 0
+                val payPrice = line._5.toFloat * 100
+                //判断帐号是否存在于redis中
+                val payAccs = CommonsThirdData.isExistStatPayAcc(orderDate, gameAccount, jedis6)
+                //如果是新增支付帐号，才计算金额，如果不是新增支付帐号，金额记为0
+                val newPayPrice = if (isNewPayAcc == 1) {
+                  line._5.toFloat * 100
+                } else {
+                  0
+                }
+                val newPayAccs = if (isNewPayAcc == 1) {
+                  CommonsThirdData.isExistStatNewPayAcc(orderDate, gameAccount, jedis6)
+                } else {
+                  0
+                }
+
+                //消费统计
+                ThirdDataDao.insertOrderStat(orderDate, gameId, group_id, pkgCode, head_people, medium_account, medium, idea_id, first_level, second_level, payPrice, payAccs, newPayPrice, newPayAccs, conn)
+              }
+            }
+          }
+        })
+        pool.returnBrokenResource(jedis)
+        pool.returnBrokenResource(jedis6)
+        pool.destroy()
+        conn.close()
+        connFx.close()
       })
     })
   }
@@ -173,7 +251,6 @@ object ThirdDataActs {
       val splitd = actives.split("\\|", -1)
       //gameid,channelid,expand_channel,imei,date,os
       (splitd(1), splitd(2), splitd(4), splitd(8), splitd(5), splitd(7))
-
     })
     activeMatchClick(dataActive)
 
@@ -188,6 +265,18 @@ object ThirdDataActs {
     })
     regiMatchActive(dataRegi)
 
+    //订单匹配注册
+
+    val dataOrder = ownerData.filter(ats => ats.contains("bi_order")).filter(line => {
+      val arr = line.split("\\|", -1)
+      //排除截断日志 只取存在订单号的数据，不存在订单号
+      arr.length >= 25 && arr(2).trim.length > 0 && arr(22).contains("6") && arr(19).toInt == 4
+    }).map(line => {
+      val adInfo = line.split("\\|", -1)
+      //游戏帐号(5),订单号(2),订单时间(6),游戏id(7),充值流水(10),imei(24)
+      (adInfo(5).trim.toLowerCase(), adInfo(2), adInfo(6), adInfo(7), Commons.getNullTo0(adInfo(10)) + Commons.getNullTo0(adInfo(13)), adInfo(24))
+    })
+    orderMatchRegi(dataOrder)
   }
 
 
@@ -238,7 +327,6 @@ object ThirdDataActs {
                 //如果点击不存在，就插入新书据到明细表
                 ThirdDataDao.insertMomoClick(pkgCode, imei, ts, os, url, gameId.toString, advName, conn)
               }
-
 
               //---2---<这里更新的日志数据都是插入数据表bi_ad_channel_stats>
 

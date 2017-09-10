@@ -11,6 +11,83 @@ import cn.wanglei.bi.utils.MD5Util
   */
 object ThirdDataDao {
 
+  //把激活明细写入到注册明细表中
+  def insertRegiDetail(regiTime: String, imei: String, pkgCode: String, medium: Int, gameId: Int, os: Int, gameAccount: String, conn: Connection) = {
+    val instSql = "insert into bi_ad_regi_o_detail(pkg_id,game_id,imei,os,regi_time,adv_name,game_account) values(?,?,?,?,?,?,?) on duplicate key update regi_time=? "
+    val ps: PreparedStatement = conn.prepareStatement(instSql)
+    //insert
+    ps.setString(1, pkgCode)
+    ps.setInt(2, gameId)
+    ps.setString(3, imei)
+    ps.setInt(4, os)
+    ps.setString(5, regiTime)
+    ps.setInt(6, medium)
+    ps.setString(7, gameAccount)
+    //update
+    ps.setString(8, regiTime)
+    ps.executeUpdate()
+    ps.close()
+  }
+
+
+  //注册帐号，注册设备数统计
+  def insertRegiStat(regiDate: String, gameId: Int, group_id: String, pkgCode: String, head_people: String, medium_account: String, medium: Int, idea_id: String, first_level: String, second_level: String, regiNum: Int, regiDev: Int, conn: Connection) = {
+    val sql2Mysql = "insert into bi_ad_channel_stats" +
+      "(publish_date,game_id,group_id,pkg_id,head_people,medium_account,medium,idea_id,first_level,second_level,regi_num,regi_dev_num)" +
+      " values(?,?,?,?,?,?,?,?,?,?,?,?) " +
+      " on duplicate key update regi_num=regi_num+?,regi_dev_num=regi_dev_num+?,group_id=?,head_people=?,medium_account=?"
+    val ps: PreparedStatement = conn.prepareStatement(sql2Mysql)
+    //insert
+    ps.setString(1, regiDate)
+    ps.setInt(2, gameId)
+    ps.setString(3, group_id)
+    ps.setString(4, pkgCode)
+    ps.setString(5, head_people)
+    ps.setString(6, medium_account)
+    ps.setInt(7, medium)
+    ps.setString(8, idea_id)
+    ps.setString(9, first_level)
+    ps.setString(10, second_level)
+    ps.setInt(11, regiNum)
+    ps.setInt(12, regiDev)
+  }
+
+
+  //插入订单数据
+  def insertOrderStat(orderDate: String, gameId: Int, group_id: String, pkgCode: String, head_people: String, medium_account: String, medium: Int, idea_id: String, first_level: String, second_level: String, payPrice: Float, payAccs: Int, newPayPrice: Float, newPayAccs: Int, conn: Connection) = {
+    val sql2MySql = "insert into bi_ad_channel_stats" +
+      "(publish_date,game_id,group_id,pkg_id,head_people,medium_account,medium,idea_id,first_level,second_level,pay_price,pay_accounts,new_pay_price,new_pay_accounts)" +
+      " values(?,?,?,?,?,?,?,?,?,?,?,?,?,?)" +
+      "on duplicate key update pay_price=pay_price+?,pay_accounts=pay_accounts+?,new_pay_price=new_pay_price+?,new_pay_accounts=new_pay_accounts+?"
+    val ps: PreparedStatement = conn.prepareStatement(sql2MySql)
+    //insert
+    ps.setString(1, orderDate)
+    ps.setInt(2, gameId)
+    ps.setString(3, group_id)
+    ps.setString(4, pkgCode)
+    ps.setString(5, head_people)
+    ps.setString(6, medium_account)
+    ps.setInt(7, medium)
+    ps.setString(8, idea_id)
+    ps.setString(9, first_level)
+    ps.setString(10, second_level)
+    ps.setFloat(11, payPrice)
+    ps.setInt(12, payAccs)
+    ps.setFloat(13, newPayPrice)
+    ps.setInt(14, newPayAccs)
+
+    //update
+    ps.setFloat(15, payPrice)
+    ps.setInt(16, payAccs)
+    ps.setFloat(17, newPayPrice)
+    ps.setInt(18, newPayAccs)
+
+    ps.executeUpdate()
+    ps.close
+
+  }
+
+
   //把激活明细写入到激活明细表中
   def insertActiveDetail(activeTime: String, imei: String, pkgCode: String, medium: Int, gameId: Int, os: Int, conn: Connection) = {
     val instSql = "insert into bi_ad_active_o_detail(pkg_id,game_id,imei,os,active_time,adv_name) values (?,?,?,?,?,?) on duplicate key update active_time=?"
