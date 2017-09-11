@@ -81,6 +81,7 @@ object CommonsThirdData {
       jedis6.set("regi|" + topic + "|" + pkgCode + "|" + imei + "|" + regiDate, topic)
       jedis6.expire("regi|" + topic + "|" + pkgCode + "|" + imei + "|" + regiDate, 1000 * 3600 * 48)
     }
+    return jg
   }
 
 
@@ -153,7 +154,7 @@ object CommonsThirdData {
     return dt
   }
 
-  //获取原生idfa，带横杠的 -
+  //获取idfa，带横杠的 -
   def getYSIdfa(idfa: String): String = {
     var jg = idfa
     if (jg.length == 32) {
@@ -167,6 +168,7 @@ object CommonsThirdData {
   //获取imei
   def getImei(imei: String) = {
     var jg = ""
+    //苹果设备是32位的英文+数字大写，安卓的imei是带&符号的长字符串，我们只取第一个&符号前面的15位数字
     if (imei.contains("&")) {
       //安卓设备取&符号前面的字段
       jg = imei.split("&", -1)(0)
@@ -178,6 +180,7 @@ object CommonsThirdData {
 
 
   //检测单击设备数，一天只计算一次，这里是按设备去重的
+  //在存入redis的时候，带入了imei这个维度，那其实就是按设备去重了
   def isClickDev(clickDate: String, pkgCode: String, imei: String, topic: String, jedis6: Jedis): Int = {
     var jg = 0
     if (jedis6.exists("click|" + topic + "|" + pkgCode + "|" + imei + "|" + clickDate)) {
@@ -186,7 +189,7 @@ object CommonsThirdData {
     } else {
       //redis中不存在，就加1
       jg = 1
-      jedis6.set("click|" + topic + "|" + pkgCode + "|" + imei + "|" + clickDate, topic)
+      jedis6.set("click|" + topic + "|" + pkgCode + "|" + imei + "|" + clickDate, topic) //有imei这个维度，起到的作用就是按imei去重
       jedis6.expire("click|" + topic + "|" + pkgCode + "|" + imei + "|" + clickDate, 1000 * 3600 * 48)
     }
     return jg
@@ -246,6 +249,7 @@ object CommonsThirdData {
     var jg = 0
     //通过 imei 和 pkg_id 以及matched来匹配一条记录
     val sql = "select callback from bi_ad_momo_click where pkg_id=? and imei=? and matched=0 limit 1"
+
     val stmt = conn.prepareStatement(sql)
     stmt.setString(1, pkgCode)
     stmt.setString(2, imei)
@@ -259,15 +263,18 @@ object CommonsThirdData {
 
 
   //有广告监控的游戏才统计
+  //做激活时，先要查询一次点击详情表bi_ad_momo_click，如果表中存在查询的game_id信息，说明这个游戏是做了广告的
   def isNeedStaGameId(gameId: Int, conn: Connection): Boolean = {
 
     var jg = false
     var stmt: PreparedStatement = null
     val sql = "select 1 as flag from bi_ad_momo_click where game_id=? limit 1"
+    val sql2 = "select 1 as flag from bi_ad_momo_click where game_id=? limit 1"
     stmt = conn.prepareStatement(sql)
     stmt.setInt(1, gameId)
     val rs: ResultSet = stmt.executeQuery()
     while (rs.next()) {
+      //这个判断不许要吧？
       if (rs.getString("flag").toInt == 1) {
         jg = true
       }

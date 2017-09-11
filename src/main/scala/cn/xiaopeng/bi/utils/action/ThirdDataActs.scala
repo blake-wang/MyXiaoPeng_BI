@@ -31,12 +31,14 @@ object ThirdDataActs {
           if (CommonsThirdData.isNeedStaGameId(gameId, conn)) {
             //这里的imei是从激活日志中取出的
             //安卓设备取&最前面部分，苹果设备直接是32位idfa
+            //imei 取值这里要注意一下
             var imei = CommonsThirdData.getImei(line._4)
-            //取出分包id                                           --这里只有android设备才匹配这个，设备匹配这个没有意义
-            var pkgCode = StringUtils.getArrayChannel(line._3)(2)
+            //取出分包id                                           --这里只有android设备才匹配这个，ios设备匹配这个没有意义
+            var pkgCode = StringUtils.getArrayChannel(line._3)(2) //expand_channel 第三段才是分包id
             //取出这个，只是为了匹配按着设备
             //取出激活时间 2017-09-09 00:00:00
             val dt = line._5
+            //激活日志这里的os，本来存的是大写的ANDROID和IOS，现在又取出来转换成2和1 ,这个就让人有点忧伤了
             val os = if (line._6.toLowerCase.equals("ios")) {
               2
             } else {
@@ -55,15 +57,20 @@ object ThirdDataActs {
               if (CommonsThirdData.isVadDev(imei, 2, 2)) {
                 //ios
                 //查询数据库之前，要把ios的idfs转换成带横杠的
+                //为什么这里要把idfa转换成带横杠的？ 因为点击日志存入数据库中ios设备的imei是带横杠的
+                //转换之后才能匹配上
                 imei = CommonsThirdData.getYSIdfa(imei.toUpperCase())
                 //什么是自由平台？
                 //匹配值 0-未匹配，匹配不成功，算到自由平台，imei-原生idfa(包括-)，我们平台的imei
+                //苹果设备，激活匹配点击，是通过imei和gameId来匹配的
                 matched = ThirdDataDao.matchClickIos(imei, dt7before, dt, gameId, conn) //苹果设备的匹配是通过imei和Id 来匹配的
               }
             } else if (os == 1) {
               //android
+              //android设备，激活匹配点击，是通过pkgCode和imei来匹配的
               matched = ThirdDataDao.matchClickAndroid(pkgCode, imei, dt7before, dt, conn) //苹果设备的匹配是通过pkgCode和imei 来匹配的
             }
+            //matched._1是更新记录的条数，如果大于等于1，说明有更新，数据匹配上了
             //如果匹配成功，则要计算设备统计数据，并且写入激活明细表
             if (matched._1 >= 1) {
               val redisValue: Array[String] = CommonsThirdData.getRedisValue(gameId, pkgCode, activeDate, jedis, connFx)
@@ -212,15 +219,19 @@ object ThirdDataActs {
                 val second_level = accountInfo._6
                 //计算是否新增帐号， 如果注册日期等于订单日期
                 val isNewPayAcc = if (regiDate.equals(orderDate)) 1 else 0
+                //<1>充值金额 单位到分
                 val payPrice = line._5.toFloat * 100
                 //判断帐号是否存在于redis中
-                val payAccs = CommonsThirdData.isExistStatPayAcc(orderDate, gameAccount, jedis6)
+                //<2>充值帐号数
+                val payAccs = CommonsThirdData.isExistStatPayAcc(orderDate, gameAccount, jedis6) //"isExistStatPayAcc|" + orderDate + "|"+gameAccount
                 //如果是新增支付帐号，才计算金额，如果不是新增支付帐号，金额记为0
+                //<3>新增充值金额 单位到分
                 val newPayPrice = if (isNewPayAcc == 1) {
                   line._5.toFloat * 100
                 } else {
                   0
                 }
+                //<4>新增充值人数
                 val newPayAccs = if (isNewPayAcc == 1) {
                   CommonsThirdData.isExistStatNewPayAcc(orderDate, gameAccount, jedis6)
                 } else {
@@ -249,7 +260,8 @@ object ThirdDataActs {
       ats.contains("bi_active")
     }).map(actives => {
       val splitd = actives.split("\\|", -1)
-      //gameid,channelid,expand_channel,imei,date,os
+
+      //gameid,   channelid, expand_channel,   imei,   date,   os
       (splitd(1), splitd(2), splitd(4), splitd(8), splitd(5), splitd(7))
     })
     activeMatchClick(dataActive)
@@ -281,6 +293,9 @@ object ThirdDataActs {
 
 
   //处理第三方点击 --把所有的第三方日志整合到一起了，都用9个字段的元组 包裹起来，不用管是哪个平台，只是从每一行数据去取值
+  //主要干两件事
+  //插入点击信息到点击明细表bi_ad_momo_click
+  //更新bi_ad_channel_stats表中的点击数，点击设备数
   def theThirdData(tdata: DStream[(String, String, String, String, String, Int, String, String, String)]) = {
     tdata.foreachRDD(rdd => {
       //显式调用cache方法，缓存rdd
@@ -295,10 +310,14 @@ object ThirdDataActs {
         val connFx = JdbcUtil.getXiaopeng2FXConn()
         part.foreach(line => {
           //这里做这个判断，是为了排除日志被截断，不完整，等一场情况，json解析过程中，发生异常，默认给的是0
+          //在解析json过程中，如果发生异常，返回的是("", "", "", "0", "", 4, "", "", "")
+          //line._4 ！= 0 取出的就是正常解析的数值
           if (line._4 != 0) {
-            //陌末原始日志中的os ，1是android，2是ios
+            //这个os取出的是 ios或者android，是字符串
             val os = line._2
+            //osInt = 把ios字符串转换成2
             val osInt = if (os.toLowerCase.equals("ios")) 2 else 1
+            //广告点击日志中的imei，取得是原始值，没有做任何转换存入点击明细表中的，可能是带 '-' 的
             val imei = line._3
             //这个advName是丽辉在数据表中定义的  1是默默 ，2是百度
             val advName = line._6.toInt
@@ -310,9 +329,9 @@ object ThirdDataActs {
               val clickDate = ts.substring(0, 10)
               //原始日志中的pkgCode 为4151M19006  ,M 以前的4151才是gameId
               val pkgCode = line._1
+              //4151M19006
               val gameId = pkgCode.substring(0, pkgCode.indexOf("M")).toInt
               val url = line._5
-
 
               //点击日志的匹配通过 pkgCode,imei,matched=0  三个指标来匹配
               //这个点击记录是，如果能匹配到记录，就说明已经存在，如果匹配不到，就存入数据库
@@ -322,6 +341,7 @@ object ThirdDataActs {
               //等于1是匹配到了，不等于1，就是没有匹配到
               if (isExistClick == 1) {
                 //如果点击已经存在，就更新ts和url
+                //在存入点击明细表这个层面，设备号imei是不分安卓和ios的
                 ThirdDataDao.updateMomoClickTs(pkgCode, imei, ts, url, conn)
               } else {
                 //如果点击不存在，就插入新书据到明细表
@@ -332,7 +352,7 @@ object ThirdDataActs {
 
               //parent_game_id,os,medium_account,promotion_channel,promotion_mode,head_people,group_id
               val redisValue: Array[String] = CommonsThirdData.getRedisValue(gameId, pkgCode, clickDate, jedis, connFx)
-              //点击数 1
+              //点击数=1,就是说，点击数默认给1，赖以条日志，计算一次，点击数就加一次，就等于+1
               val clicks = 1
               val topic = advName match {
                 case 0 => "pyw"
@@ -344,6 +364,7 @@ object ThirdDataActs {
                 case 6 => "guangdiantong"
               }
               //clickDevs 的数值是 0 或者 1
+              //redis里面存键的时候，有imei这个维度，算是做到了按设备去重
               val clickDevs = CommonsThirdData.isClickDev(clickDate, pkgCode, imei, topic, jedis6)
               val medium = advName
               val group_id = redisValue.apply(6)
@@ -419,6 +440,30 @@ object ThirdDataActs {
             case e: Exception => e.printStackTrace; ("", "", "", "0", "", 3, "", "", "")
           } //3是今日头条
 
+        })
+      ).union(
+        thirdData.filter(line => {
+          line.contains("bi_adv_aiqiyi_click") //aiqiyi
+        }).map(line => {
+          //根据爱奇艺的定义字段，取值
+          try {
+            val jsStr = JSONObject.fromObject(line)
+            //pkg_id字段基本都是同一的
+            (jsStr.get("pkg_id").toString,
+              //os这个字段，要看每家具体的json字符串中的值
+              if (jsStr.get("os").toString.equals("0")) "android" else if (jsStr.get("os").toString.equals("1")) "ios" else "wp",
+              //imei直接取出
+              jsStr.get("imei").toString,
+              //日期根据具体的值取出转换
+              simpleDateFormat.format(new Date(jsStr.get("timestamp").toString.toDouble.toLong * 1000)),
+              //callback这个字段的名称根据具体的去取
+              jsStr.get("callback").toString,
+              //3表是广告平台，adid是创意id，cid是广告第二层
+              3, jsStr.get("adid").toString, "", jsStr.get("cid").toString //广告主标示 创意ID 广告第一层 广告第二次
+            )
+          } catch {
+            case e: Exception => e.printStackTrace; ("", "", "", "0", "", 4, "", "", "")
+          } //4是爱奇艺
         })
       )
     )

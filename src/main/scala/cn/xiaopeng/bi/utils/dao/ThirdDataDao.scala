@@ -71,10 +71,10 @@ object ThirdDataDao {
     ps.setString(8, idea_id)
     ps.setString(9, first_level)
     ps.setString(10, second_level)
-    ps.setFloat(11, payPrice)
-    ps.setInt(12, payAccs)
-    ps.setFloat(13, newPayPrice)
-    ps.setInt(14, newPayAccs)
+    ps.setFloat(11, payPrice) //充值金额 ，单位到分
+    ps.setInt(12, payAccs) //充值人数
+    ps.setFloat(13, newPayPrice) //新增付费，单位到分
+    ps.setInt(14, newPayAccs) //新增付费人数
 
     //update
     ps.setFloat(15, payPrice)
@@ -155,11 +155,14 @@ object ThirdDataDao {
     //根据平台编号，判断是哪个平台
     //0是朋友玩，除了0，才是第三方平台
     if (advName != 0) {
-      //1是陌陌，需要加密
-      if (advName == 1) {
+      //1是陌陌，3是今日头条，需要加密
+      //陌陌平台发的点击日志的android设备imei是加密的
+      //所以，从我们自己的激活日志中拿出的imei需要md5加密后，再大写，才能和点击日志中的imei去匹配
+      if (advName == 1 || advName ==3) {
         imei = MD5Util.md5(imei).toUpperCase()
       }
       //计算匹配
+      //android设备的匹配，是通过 imei,pkg_id,ts和matched状态码
       val instSql = "update bi_ad_momo_click set matched=1 where imei=? and ts<=? and ts>=? and matched=0 and pkg_id=0 "
       ps = conn.prepareStatement(instSql)
       ps.setString(1, imei)
@@ -200,6 +203,7 @@ object ThirdDataDao {
     var ideaId = ""
     var firstLevel = ""
     var secondLevel = ""
+    //苹果设备的匹配是 imei ,game_id,ts区间，matched状态码
     val instSql = "update bi_ad_momo_click set matched=1 where imei=? and ts<=? and ts >=? and matched=0 and game_id=? "
     var ps: PreparedStatement = conn.prepareStatement(instSql)
     ps.setString(1, imei)
@@ -226,6 +230,7 @@ object ThirdDataDao {
       }
     }
     ps.close()
+    //bi_ad_momo_click表中的imei是带横杠的，在返回到外面的时候，把横杠去掉
     tp8 = new Tuple8(jg, pkg, imei, idfa.replace("-", ""), adv_name, ideaId, firstLevel, secondLevel)
     return tp8
 
@@ -233,7 +238,7 @@ object ThirdDataDao {
 
   //插入数据到bi_ad_channel_stats表，如果数据不存在就插入，如果存在，就更新点击数
   def insertClickStat(activeDate: String, gameId: Int, group_id: String, pkgCode: String, head_people: String, medium_account: String, medium: Int, idea_id: String, first_level: String, second_level: String, clicks: Int, clickDevs: Int, conn: Connection) = {
-    val sql2Mysql = "insert into bi_ad_channel" +
+    val sql2Mysql = "insert into bi_ad_channel_stats" +
       "(publish_date,game_id,group_id,pkg_id,head_people,medium_account,medium,idea_id,first_level,second_level,click_num,click_dev_num)" +
       "values(?,?,?,?,?,?,?,?,?,?,?,?)" +
       "on duplicate key update click_num=click_num+?,click_dev_num=click_dev_num+?"
@@ -249,9 +254,8 @@ object ThirdDataDao {
     ps.setString(8, idea_id)
     ps.setString(9, first_level)
     ps.setString(10, second_level)
-    ps.setInt(11, clicks)
-    ps.setInt(12, clickDevs) //os
-    ps.setString(11, head_people) //group_id
+    ps.setInt(11, clicks) //点击数
+    ps.setInt(12, clickDevs) //点击设备数
 
     //update
     ps.setInt(13, clicks)
