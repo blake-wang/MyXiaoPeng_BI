@@ -15,6 +15,8 @@ object CommonsThirdData {
   //判断是否已经被统计过
   def isExistStatNewPayAcc(orderDate: String, gameAccount: String, jedis6: Jedis): Int = {
     var jg = 0
+    //订单的日志是按订单日期和帐号去重的
+    //带上orderDate和gameAccount这两个指标，同时去重
     if (jedis6.exists("isExistStatNewPayAcc|" + orderDate + "|" + gameAccount)) {
       jg = 0
     } else {
@@ -72,6 +74,7 @@ object CommonsThirdData {
   //注册设备数，一天只能计算一次
   def isRegiDev(regiDate: String, pkgCode: String, imei: String, topic: String, jedis6: Jedis): Int = {
     //默认这个设备已经注册过
+    //
     var jg = 0
     if (jedis6.exists("regi|" + topic + "|" + pkgCode + "|" + imei + "|" + regiDate)) {
       //如果redis中存在数据，则注册设备数 返回0
@@ -93,6 +96,7 @@ object CommonsThirdData {
     var secondLevel = ""
     var pkgId = ""
     var stmt: PreparedStatement = null
+    //日志是一条一条处理的，这里就用os类型做区分
     if (os == 2) {
       //苹果设备
       //如果是苹果设备，用imei和gameId 来匹配
@@ -104,6 +108,7 @@ object CommonsThirdData {
       stmt.setInt(4, gameId)
     } else {
       //安卓设备
+      //安卓设备的匹配  pkg_id,game_id,imei
       val sql: String = "select adv_name,pkg_id,idea_id,first_level,second_level from bi_ad_active_o_detail where imei=? and  pkg_id=? and active_time>? and active_time<=? and game_id=? limit 1"
       stmt = conn.prepareStatement(sql)
       stmt.setString(1, imei)
@@ -112,6 +117,7 @@ object CommonsThirdData {
       stmt.setString(4, regiTime)
       stmt.setInt(5, gameId)
     }
+
     val rs: ResultSet = stmt.executeQuery()
     while (rs.next()) {
       ideaId = rs.getString("idea_id")
@@ -269,7 +275,6 @@ object CommonsThirdData {
     var jg = false
     var stmt: PreparedStatement = null
     val sql = "select 1 as flag from bi_ad_momo_click where game_id=? limit 1"
-    val sql2 = "select 1 as flag from bi_ad_momo_click where game_id=? limit 1"
     stmt = conn.prepareStatement(sql)
     stmt.setInt(1, gameId)
     val rs: ResultSet = stmt.executeQuery()

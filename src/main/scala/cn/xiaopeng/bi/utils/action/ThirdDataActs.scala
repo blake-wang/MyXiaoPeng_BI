@@ -81,13 +81,18 @@ object ThirdDataActs {
               val idea_id = matched._6
               val first_level = matched._7
               val second_level = matched._8
+              //统计用，激活数
               val activeNum = 1
               //苹果设备，匹配点击日志中的pkgCode，安卓设备，匹配我们自己的激活日志中的expand_channel第三部分
+              //matched中的imei是从点击明细表中查出的，苹果设备用这个原始的imei。安卓设备直接使用激活日志中的
+              //这个pkgCode 要搞清楚安卓和苹果的区别！
               pkgCode = if (os == 2) matched._2 else pkgCode
               imei = matched._4
               //激活统计 激活数
+              //<1>如果激活日志和点击明细数据表中的信息匹配上，才更新统计记录表
               ThirdDataDao.insertActiveStat(activeDate, gameId, group_id, pkgCode, head_people, medium_account, medium, idea_id, first_level, second_level, activeNum, conn)
               //把激活匹配数据写入到明细，后期注册统计使用
+              //<2>同时，更新激活明细表
               if (matched._1 >= 1) {
                 //匹配成功
                 ThirdDataDao.insertActiveDetail(activeTime, imei, pkgCode, medium, gameId, os, conn)
@@ -119,17 +124,33 @@ object ThirdDataActs {
         val conn = JdbcUtil.getConn()
         val connFx = JdbcUtil.getXiaopeng2FXConn()
         part.foreach(line => {
+          //这个gameId是从注册日志中取出的
           val gameId = line._2.toInt
+          //要判断这个游戏是不是有广告投放的游戏
           if (CommonsThirdData.isNeedStaGameId(gameId, conn)) {
+            //这个imei是从注册日志中取出的
+            //9554B84FB0B94C5CAD13F12895DE2D4A1    IOS的
+            //867992029691862&ea2035fa7c616b47&68:3e:34:24:8e:a9    ANDROID的
+            //日志中的imei设备号，IOS的直接用，安卓的取第一个&前面的15位数字
             val imei = CommonsThirdData.getImei(line._5)
+            //这个pkgCode，取得就是第三段
             var pkgCode = line._3
+            //帐号是小写的
             val gameAccount = line._1
+            //日志中是大写的，在前面过滤日志的时候，转换成了小写,并且在这里把 android->1 ,ios->2
             val os = if (line._6.equals("android")) 1 else 2
             if (CommonsThirdData.isVadDev(imei, 2, 2)) {
+              //注册时间，格式为 '2017-09-12 08:19:22'
               val regiTime = line._4
+              //注册日期，格式为 '2017-09-12'
               val regiDate = line._4.substring(0, 10)
+              //获取注册日期30天以前的日期，注册匹配激活，时间差是30天
               val dt30before = CommonsThirdData.getDt7Before(regiDate, -30)
+              //注册匹配激活
               val matched: (Int, String, String, String, String) = CommonsThirdData.regiMatchActive(pkgCode, imei, dt30before, regiTime, gameId, os, conn)
+              //matched._1是adName
+
+              //这里的这个pkgCode是怎样处理的
               pkgCode = if (matched._1 >= 1) {
                 //如果adName >= 1，说明是第三方广告平台
                 matched._5
@@ -137,12 +158,14 @@ object ThirdDataActs {
                 //adName=0 并且 os=2
                 ""
               } else {
+                //adName=0 并且 os=1
                 pkgCode
               }
               //adName如果大于1，说明匹配到了广告平台
               //如果匹配到了，则要计算注册统计数据，并且写入注册明细表，计算消费匹配时使用
               if (matched._1 >= 1) {
                 val redisValue: Array[String] = CommonsThirdData.getRedisValue(gameId, pkgCode, regiDate, jedis, connFx)
+                //这个medium 就是adName
                 val medium = matched._1
                 val group_id = redisValue(6)
                 val medium_account = redisValue(2)
@@ -150,6 +173,7 @@ object ThirdDataActs {
                 val idea_id = matched._2
                 val first_level = matched._3
                 val second_level = matched._4
+                //注册数
                 val regiNum = 1
                 val topic = medium match {
                   case 1 => "momo"
@@ -160,7 +184,9 @@ object ThirdDataActs {
                   case 6 => "guangdiantong"
                   case 0 => "pyw"
                 }
+                //redis做匹配是为了日志去重
                 //在redis中做匹配 ，匹配维度为  topic+pkgCode+imei+regiDate
+                //匹配维度中
                 val regiDev = CommonsThirdData.isRegiDev(regiDate, pkgCode, imei, topic, jedis6)
                 //注册统计
                 ThirdDataDao.insertRegiStat(regiDate, gameId, group_id, pkgCode, head_people, medium_account, medium, idea_id, first_level, second_level, regiNum, regiDev, conn)
@@ -272,7 +298,7 @@ object ThirdDataActs {
       rgInfo.length > 14 && StringUtils.isNumber(rgInfo(4))
     }).map(regi => {
       val arr = regi.split("\\|", -1)
-      //game_account,game_id,expand_channel(渠道用_分割，取第三段 分包id),reg_time,imei,os
+      //game_account,game_id,expand_channel(渠道用_分割，取第三段 分包id),reg_time,imei,   os(从注册日志中取出的是大写的IOS和ANDROID，这里转换成了小写)
       (arr(3), arr(4).toInt, StringUtils.getArrayChannel(arr(13))(2), arr(5), arr(14), arr(11).toLowerCase())
     })
     regiMatchActive(dataRegi)
@@ -309,7 +335,7 @@ object ThirdDataActs {
         jedis6.select(6)
         val connFx = JdbcUtil.getXiaopeng2FXConn()
         part.foreach(line => {
-          //这里做这个判断，是为了排除日志被截断，不完整，等一场情况，json解析过程中，发生异常，默认给的是0
+          //这里做这个判断，是为了排除日志被截断，不完整，等异常情况，json解析过程中，发生异常，默认给的是0
           //在解析json过程中，如果发生异常，返回的是("", "", "", "0", "", 4, "", "", "")
           //line._4 ！= 0 取出的就是正常解析的数值
           if (line._4 != 0) {
@@ -401,6 +427,7 @@ object ThirdDataActs {
         val jsStr = JSONObject.fromObject(line)
         (
           jsStr.get("pkg_id").toString,
+          //把os字段中的2转换成android，1转换成ios
           if (jsStr.get("os").toString.equals("2")) "android" else if (jsStr.get("os").toString.equals("1")) "ios" else "wp",
           if (jsStr.get("imei").toString.equals("")) jsStr.get("idfa").toString else jsStr.get("imei").toString,
           simpleDateFormat.format(new Date(jsStr.get("ts").toString.toDouble.toLong * 1000)),
@@ -416,6 +443,7 @@ object ThirdDataActs {
         try {
           val jsStr = JSONObject.fromObject(line)
           (jsStr.get("pkg_id").toString,
+            //把os字段中的1转换成android，2转换成ios
             if (jsStr.get("os").toString.equals("1")) "android" else if (jsStr.get("os").toString.equals("2")) "ios" else "wp",
             jsStr.get("imei").toString,
             simpleDateFormat.format(new Date(jsStr.get("ts").toString.toDouble.toLong * 1000)),
@@ -430,8 +458,10 @@ object ThirdDataActs {
           try {
             val jsStr = JSONObject.fromObject(line)
             (jsStr.get("pkg_id").toString,
+              //把os字段中的0转换成android，1转换成ios
               if (jsStr.get("os").toString.equals("0")) "android" else if (jsStr.get("os").toString.equals("1")) "ios" else "wp",
               jsStr.get("imei").toString,
+              //时间戳这个字段，如果取值不正常，json解析会出异常，返回的就是默认值
               simpleDateFormat.format(new Date(jsStr.get("timestamp").toString.toDouble.toLong * 1000)),
               jsStr.get("callback").toString,
               3, jsStr.get("adid").toString, "", jsStr.get("cid").toString //广告主标示 创意ID 广告第一层 广告第二次

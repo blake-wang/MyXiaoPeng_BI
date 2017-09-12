@@ -27,4 +27,15 @@ object SimpleDateFormatTest {
     println(date)
     println(strA)
   }
+
+  private def longToString = {
+    val long = 1505124784000L
+    val date = new Date(long)
+    val simpleDateFormat = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss")
+    //format是把date对象转换成日期字符串
+    //parse是把时间字符串，转换成date对象
+    val dateStr = simpleDateFormat.format(date)
+    println(date)
+    println(dateStr)
+  }
 }
