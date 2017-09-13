@@ -10,8 +10,28 @@ import cn.wanglei.bi.utils.MD5Util
   * Created by bigdata on 17-9-8.
   */
 object ThirdDataDao {
+  //把订单明细写入到订单详情表中
+  def insertOrderDetail(orderTime: String, imei: String, pkgCode: String, medium: Int, gameId: Int, os: Int, gameAccount: String, payPrice: Float, conn: Connection) = {
+    val orderSql = "insert into bi_ad_order_o_detail (pkg_id,game_id,imei,os,order_time,adv_name,game_account,pay_price) values (?,?,?,?,?,?,?,?) on duplicate key update order_time=?,pay_price=pay_price+?"
+    val ps: PreparedStatement = conn.prepareStatement(orderSql)
+    //insert
+    ps.setString(1, pkgCode)
+    ps.setInt(2, gameId)
+    ps.setString(3, imei)
+    ps.setInt(4, os)
+    ps.setString(5, orderTime)
+    ps.setInt(6, medium)
+    ps.setString(7, gameAccount)
+    ps.setFloat(8, payPrice)
+    //update
+    ps.setString(9, orderTime)
+    ps.setFloat(10, payPrice)
+    ps.executeUpdate()
+    ps.close()
+  }
 
-  //把激活明细写入到注册明细表中
+
+  //把注册明细写入到注册明细表中
   def insertRegiDetail(regiTime: String, imei: String, pkgCode: String, medium: Int, gameId: Int, os: Int, gameAccount: String, conn: Connection) = {
     val instSql = "insert into bi_ad_regi_o_detail(pkg_id,game_id,imei,os,regi_time,adv_name,game_account) values(?,?,?,?,?,?,?) on duplicate key update regi_time=? "
     val ps: PreparedStatement = conn.prepareStatement(instSql)
@@ -158,7 +178,7 @@ object ThirdDataDao {
       //1是陌陌，3是今日头条，需要加密
       //陌陌平台发的点击日志的android设备imei是加密的
       //所以，从我们自己的激活日志中拿出的imei需要md5加密后，再大写，才能和点击日志中的imei去匹配
-      if (advName == 1 || advName ==3) {
+      if (advName == 1 || advName == 3) {
         imei = MD5Util.md5(imei).toUpperCase()
       }
       //计算匹配
