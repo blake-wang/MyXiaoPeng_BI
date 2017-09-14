@@ -224,6 +224,7 @@ object ThirdDataActs {
             val imei = CommonsThirdData.getImei(line._6)
             if (CommonsThirdData.isVadDev(imei, 2, 2)) {
               val gameAccount = line._1
+              val orderID = line._2
               val orderTime = line._3
               val orderDate = orderTime.substring(0, 10)
               //先查询一次bi_ad_regi_o_detail，通过帐号信息，查询到其他信息，
@@ -240,9 +241,10 @@ object ThirdDataActs {
                 val group_id = redisValue(6)
                 val medium_account = redisValue(2)
                 val head_people = redisValue(5)
-                val idea_id = accountInfo._4
-                val first_level = accountInfo._5
-                val second_level = accountInfo._6
+                val os = accountInfo._4
+                val idea_id = accountInfo._5
+                val first_level = accountInfo._6
+                val second_level = accountInfo._7
                 //计算是否新增帐号， 如果注册日期等于订单日期
                 val isNewPayAcc = if (regiDate.equals(orderDate)) 1 else 0
                 //<1>充值金额 单位到分
@@ -263,7 +265,8 @@ object ThirdDataActs {
                 } else {
                   0
                 }
-
+                //消费明细
+                ThirdDataDao.insertOrderDetail(orderID, orderTime, imei, pkgCode, medium, gameId, os, gameAccount, payPrice, conn)
                 //消费统计
                 ThirdDataDao.insertOrderStat(orderDate, gameId, group_id, pkgCode, head_people, medium_account, medium, idea_id, first_level, second_level, payPrice, payAccs, newPayPrice, newPayAccs, conn)
               }
@@ -286,7 +289,7 @@ object ThirdDataActs {
       ats.contains("bi_active")
     }).map(actives => {
       val splitd = actives.split("\\|", -1)
-
+      val hah = ""
       //gameid,   channelid, expand_channel,   imei,   date,   os
       (splitd(1), splitd(2), splitd(4), splitd(8), splitd(5), splitd(7))
     })
@@ -337,8 +340,8 @@ object ThirdDataActs {
         part.foreach(line => {
           //这里做这个判断，是为了排除日志被截断，不完整，等异常情况，json解析过程中，发生异常，默认给的是0
           //在解析json过程中，如果发生异常，返回的是("", "", "", "0", "", 4, "", "", "")
-          //line._4 ！= 0 取出的就是正常解析的数值
-          if (line._4 != 0) {
+          //!line._4.equals("0")  取出的就是正常解析的数值
+          if (!line._4.equals("0")) {
             //这个os取出的是 ios或者android，是字符串
             val os = line._2
             //osInt = 把ios字符串转换成2

@@ -44,17 +44,18 @@ object CommonsThirdData {
 
 
   //获取游戏帐号信息
-  def getAccountInfo(gameAccount: String, conn: Connection): Tuple6[String, String, Int, String, String, String] = {
-    var tp6 = Tuple6("", "", 0, "", "", "")
+  def getAccountInfo(gameAccount: String, conn: Connection): Tuple7[String, String, Int, Int, String, String, String] = {
+    var tp7 = Tuple7("", "", 0, 1, "", "", "")
     //pkg,date,adid
     var regiDate = "0000-00-00"
     var adName = 0
     var pkgId = ""
+    var os = 1
     var ideaId = ""
     var firstLevel = ""
     var secondLevel = ""
     var ps: PreparedStatement = null
-    val instSql = "select pkg_id,regi_time,adv_name,idea_id,first_level,second_level from bi_ad_regi_o_detail where game_account=? limit 1"
+    val instSql = "select pkg_id,regi_time,adv_name,os,idea_id,first_level,second_level from bi_ad_regi_o_detail where game_account=? limit 1"
     ps = conn.prepareStatement(instSql)
     ps.setString(1, gameAccount)
     val rs = ps.executeQuery()
@@ -63,12 +64,13 @@ object CommonsThirdData {
       pkgId = rs.getString("pkg_id")
       adName = rs.getString("adv_name").toInt
       regiDate = rs.getString("regi_time")
+      os = rs.getString("os").toInt
       ideaId = rs.getString("idea_id")
       firstLevel = rs.getString("first_level")
       secondLevel = rs.getString("second_level")
     }
-    tp6 = new Tuple6(pkgId, regiDate, adName, ideaId, firstLevel, secondLevel)
-    return tp6
+    tp7 = new Tuple7(pkgId, regiDate, adName, os, ideaId, firstLevel, secondLevel)
+    return tp7
   }
 
   //注册设备数，一天只能计算一次
@@ -138,11 +140,13 @@ object CommonsThirdData {
   //momo  比较特殊，是加密的  5284047f4ffb4e04824a2fd1d1f0cd62
   def isVadDev(imei: String, os: Int, advName: Int): Boolean = {
     var jg = true
+    //原始json日志中取出的是00000000-0000-0000-0000-000000000000,000000000000000,"" 这三种要排除
     if (imei.replace("-", "").equals("00000000000000000000000000000000") || imei.replace("-", "").equals("000000000000000") || imei.replace("-", "").equals("")) {
       jg = false
     }
     //如果是陌陌，匹配加密,  os=1  是android设备
-    if (os == 1 && advName == 1 && imei.equals("5284047f4ffb4e04824a2fd1d1f0cd62")) {
+    //陌陌和今日头条都是加密的
+    if (os == 1 && (advName == 1 || advName == 3) && imei.equals("5284047f4ffb4e04824a2fd1d1f0cd62")) {
       jg = false
     }
     return jg

@@ -10,25 +10,15 @@ import cn.wanglei.bi.utils.MD5Util
   * Created by bigdata on 17-9-8.
   */
 object ThirdDataDao {
+
   //把订单明细写入到订单详情表中
-  def insertOrderDetail(orderTime: String, imei: String, pkgCode: String, medium: Int, gameId: Int, os: Int, gameAccount: String, payPrice: Float, conn: Connection) = {
-    val orderSql = "insert into bi_ad_order_o_detail (pkg_id,game_id,imei,os,order_time,adv_name,game_account,pay_price) values (?,?,?,?,?,?,?,?) on duplicate key update order_time=?,pay_price=pay_price+?"
-    val ps: PreparedStatement = conn.prepareStatement(orderSql)
-    //insert
-    ps.setString(1, pkgCode)
-    ps.setInt(2, gameId)
-    ps.setString(3, imei)
-    ps.setInt(4, os)
-    ps.setString(5, orderTime)
-    ps.setInt(6, medium)
-    ps.setString(7, gameAccount)
-    ps.setFloat(8, payPrice)
-    //update
-    ps.setString(9, orderTime)
-    ps.setFloat(10, payPrice)
-    ps.executeUpdate()
-    ps.close()
+  def insertOrderDetail(orderID: String, orderTime: String, imei: String, pkgCode: String, medium: Int, gameId: Int, os: Int, gameAccount: String, payPrice: Float, conn: Connection) = {
+//    val
+//      val ps = conn.prepareStatement()
   }
+
+
+
 
 
   //把注册明细写入到注册明细表中
