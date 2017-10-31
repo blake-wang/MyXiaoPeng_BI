@@ -11,6 +11,22 @@ import scala.collection.mutable.ArrayBuffer
   * Created by wanglei on 2017/7/13.
   */
 object JdbcUtil {
+  //获取xiaopeng2_bi从库连接，可以对明细数据做定时处理
+  def getBiHippoConn() = {
+    val url = ConfigurationUtil.getProperty(Constants.JDBC_XIAOPENG2_BIHIP_URL)
+    val driver = ConfigurationUtil.getProperty(Constants.JDBC_DRIVER)
+    try {
+      Class.forName(driver)
+      val connection = DriverManager.getConnection(url)
+      connection
+    } catch {
+      case ex: Exception => {
+        println("获取数据库连接错误：Exception=" + ex)
+      }
+        null
+    }
+  }
+
 
   /**
     * 获取xiaopeng2库连接，利于补充缺失数据

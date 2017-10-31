@@ -1,0 +1,8 @@
+<component name="ArtifactManager">
+  <artifact type="jar" name="MyXiaoPeng_BI:jar">
+    <output-path>$PROJECT_DIR$/out/artifacts/MyXiaoPeng_BI_jar</output-path>
+    <root id="archive" name="MyXiaoPeng_BI.jar">
+      <element id="module-output" name="MyXiaoPeng_BI" />
+    </root>
+  </artifact>
+</component>
