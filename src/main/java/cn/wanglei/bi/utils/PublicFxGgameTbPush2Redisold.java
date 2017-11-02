@@ -17,7 +17,7 @@ import java.util.Map;
  * 目的：从mysql中定时查询数据，然后推送到redis中，发行相关维度数据到redis
  */
 
-public class PublicFxGgameTbPush2Redis {
+public class PublicFxGgameTbPush2Redisold {
 
 
     //测试redis存入取出数据

@@ -1,7 +1,8 @@
 package cn.xiaopeng.bi.gamepublish
 
 import cn.wanglei.bi.ConfigurationUtil
-import cn.xiaopeng.bi.utils.{HiveContextSingleton, SparkUtils}
+import cn.wanglei.bi.utils.publicFxGameTbPush2Redis
+import cn.xiaopeng.bi.utils._
 import kafka.serializer.StringDecoder
 import org.apache.log4j.{Level, Logger}
 import org.apache.spark.sql.hive.HiveContext
@@ -46,7 +47,20 @@ object GamePublishKpi {
       val hiveContext: HiveContext = HiveContextSingleton.getInstance(sc)
 
       //基本维度信息
+      publicFxGameTbPush2Redis.publicGameTbPush2Redis()
       //把以前的日志bi_pubgame和本次实时的日志bi_pubgame 相加
+      StreamingUtils.convertPubGameLogsToDfTmpTable(rdd,hiveContext)
+      //处理注册日志
+      GamePublicRegiUtil.loadRegiInfo(rdd, hiveContext)
+      //处理激活日志
+      GamePublicActiveUtil.loadActiveInfo(rdd,hiveContext)
+      //处理登录数据
+      //处理支付数据(需要根据设备去重
+      //处理支付数据(不许要根据设备去重)
+      //处理点击数据
+      GamePublicClickUtil.loadClickInfo(rdd, hiveContext);
+      //广告监测钱大师
+      //把投放的数据实时汇总到运营
 
 
 

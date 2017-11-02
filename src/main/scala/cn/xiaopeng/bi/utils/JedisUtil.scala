@@ -10,6 +10,8 @@ import redis.clients.jedis.{Jedis, JedisPool}
   * Created by bigdata on 7/18/17.
   */
 object JedisUtil {
+
+
   def getJedisPool: JedisPool = {
     val host = ConfigurationUtil.getProperty(Constants.REDIS_HOST)
     val port = new Integer(ConfigurationUtil.getProperty(Constants.REDIS_PORTY))
@@ -45,6 +47,29 @@ object JedisUtil {
     val os = Commons.getPubGameGroupIdAndOs(game_id,connFx)(1)
     val groupid = Commons.getPubGameGroupIdAndOs(game_id,connFx)(0)
     Array[String](parent_game_id,os,medium_account,promotion_channel,promotion_mode,head_people,groupid)
+  }
+
+  def getRedisValue(game_id: Int, pkg_code: String, order_date: String, jedis: Jedis) = {
+    var parent_game_id = jedis.hget(game_id.toString+"_publish_game","mainid")
+    if(parent_game_id==null) parent_game_id="0"
+    var medium_account = jedis.hget(pkg_code+"_pkgcode","medium_account")
+    if(medium_account == null) medium_account=""
+    var promotion_channel = jedis.hget(pkg_code+"_pkgcode","promotion_channel")
+    if(promotion_channel==null) promotion_channel=""
+    var promotion_mode = jedis.hget(pkg_code + "_" + order_date + "_pkgcode", "promotion_mode")
+    if (promotion_mode == null) promotion_mode = ""
+    var head_people = jedis.hget(pkg_code + "_" + order_date + "_pkgcode", "head_people")
+    if (head_people == null) head_people = ""
+    var os = jedis.hget(game_id.toString + "_publish_game", "system_type")
+    if (os == null) {
+      println(game_id + ":getRedisValue get os is err:" + os); os = "1"
+    }
+    var groupid = jedis.hget(game_id + "_publish_game", "publish_group_id")
+    if (groupid == null) {
+      println(game_id + ":getRedisValue get groupid is err:" + groupid); groupid = "0"
+    }
+    Array[String](parent_game_id, os, medium_account, promotion_channel, promotion_mode, head_people, groupid)
+
   }
 
 }

@@ -9,29 +9,29 @@ import scala.collection.mutable.ArrayBuffer
   */
 object StringUtils {
 
-  val  mode=  ConfigurationUtil.getProperty("web.url.mode");
+  val mode = ConfigurationUtil.getProperty("web.url.mode");
 
-//  def isNumber(str: String): Boolean = {
-//    if (str.equals("")) {
-//      return false;
-//    }
-//    for (i <- 0.to(str.length - 1)) {
-//      if (!Character.isDigit(str.charAt(i))) {
-//        return false;
-//      }
-//    }
-//    return true;
-//  }
+  //  def isNumber(str: String): Boolean = {
+  //    if (str.equals("")) {
+  //      return false;
+  //    }
+  //    for (i <- 0.to(str.length - 1)) {
+  //      if (!Character.isDigit(str.charAt(i))) {
+  //        return false;
+  //      }
+  //    }
+  //    return true;
+  //  }
 
   //判断一个字符串是数字
-  def isNumber(str:String):Boolean={
-    if(str.equals("")){
+  def isNumber(str: String): Boolean = {
+    if (str.equals("")) {
       return false;
     }
-    for(i<-0.to(str.length -1)){
+    for (i <- 0.to(str.length - 1)) {
       //判断字符是否是数字
-      if(!Character.isDigit(str.charAt(i))){
-          return false
+      if (!Character.isDigit(str.charAt(i))) {
+        return false
       }
     }
     return true
@@ -49,21 +49,6 @@ object StringUtils {
     return true;
   }
 
-  /**
-    * 判断字符串是否符合正则表达式
-    *
-    * @param log
-    * @param regx
-    * @return
-    */
-  def isRequestLog(log: String, regx: String): Boolean = {
-    val p1 = regx.r
-    val p1Matches = log match {
-      case p1() => true // no groups
-      case _ => false
-    }
-    p1Matches
-  }
 
   def defaultEmptyTo21(str: String): String = {
     if ("".equals(str)) {
@@ -73,6 +58,22 @@ object StringUtils {
     } else {
       str
     }
+  }
+
+  def main(args: Array[String]): Unit = {
+//    val rs = isRequestLog("1",".*0800] \"GET /Ssxy/loadComplete[?]p=[\\d|_|a-z|A-Z]+&g=[\\d]+.*")
+    val rs = isRequestLog("HTTP/1.0\" 404",".*0800] \"GET /Ssxy/loadComplete[?]p=[\\d|_|a-z|A-Z]+&g=[\\d]+.*")
+    println(rs)
+  }
+
+  //判断字符串是否符合正则表达式
+  def isRequestLog(log: String, regx: String): Boolean = {
+    val p1 = regx.r
+    val p1Matches = log match {
+      case p1 => true
+      case _ => false
+    }
+    p1Matches
   }
 
   def getArrayChannel(channelId: String): Array[String] = {
@@ -100,7 +101,7 @@ object StringUtils {
         if (index == 0) {
           param = param + "{\"game_id\":" + param2(index) + ","
         } else if (index == 1) {
-          param = param + "\"divide_date\":" + "\"" + param2(index) + "\",\"from\":\""+mode+"\"},"
+          param = param + "\"divide_date\":" + "\"" + param2(index) + "\",\"from\":\"" + mode + "\"},"
         }
       }
     }

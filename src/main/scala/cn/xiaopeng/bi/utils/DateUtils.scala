@@ -3,18 +3,31 @@ package cn.xiaopeng.bi.utils
 import java.text.{ParseException, SimpleDateFormat}
 import java.util.{Calendar, Date}
 
+import org.json.Test
+
 /**
   * Created by JSJSB-0071 on 2016/8/25.
   */
 object DateUtils {
+  def getTodayTime(): Any = {
+
+  }
+
   val HOUR_FORMAT = new SimpleDateFormat("yyyy-MM-dd HH")
   val TIME_FORMAT = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss")
   val DATE_FORMAT = new SimpleDateFormat("yyyy-MM-dd")
   val DATEKEY_FORMAT = new SimpleDateFormat("yyyyMMdd")
 
   def main(args: Array[String]): Unit = {
-    val date = getDate
-    println(date)
+//    val date = getDate
+//    println(date)
+
+    val day = getDay(1)
+    println(day)
+
+    val a = beforeHour("2017-10-12 11","2017-10-12 15")
+    println(a)
+
   }
 
 
