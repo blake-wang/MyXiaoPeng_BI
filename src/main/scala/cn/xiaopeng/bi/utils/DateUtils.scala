@@ -19,14 +19,20 @@ object DateUtils {
   val DATEKEY_FORMAT = new SimpleDateFormat("yyyyMMdd")
 
   def main(args: Array[String]): Unit = {
-//    val date = getDate
-//    println(date)
+    //    val date = getDate
+    //    println(date)
 
-    val day = getDay(1)
-    println(day)
+//    val day = getDay(1)
+//    println(day)
+//
+//    val a = beforeHour("2017-10-12 11", "2017-10-12 15")
+//    println(a)
 
-    val a = beforeHour("2017-10-12 11","2017-10-12 15")
-    println(a)
+
+    for (ii <- -1 to 2){
+      val a = getDay(ii)
+      println(a)
+    }
 
   }
 
@@ -72,6 +78,7 @@ object DateUtils {
     }
     return false
   }
+
   /**
     * 判断一个时间是否在另一个时间之前
     *
@@ -113,6 +120,7 @@ object DateUtils {
     }
     return false
   }
+
   /**
     * 判断一个时间是否在另一个时间之前
     *
@@ -154,6 +162,7 @@ object DateUtils {
     }
     return false
   }
+
   def getNowFullDate(pattern: String): String = {
     val now: Date = new Date()
     TIME_FORMAT.format(now)
@@ -169,22 +178,22 @@ object DateUtils {
       val split = requestDateStr.split("\\[")(1).split("\\]")(0).split(" ")
       val dateStr = split(0).split("/")
 
-      dateStr(2).split(":",-1)(0) + "-" + changeEnglishMonthTo(dateStr(1)) + "-" + dateStr(0)
+      dateStr(2).split(":", -1)(0) + "-" + changeEnglishMonthTo(dateStr(1)) + "-" + dateStr(0)
     } catch {
-      case ex: Exception =>{
+      case ex: Exception => {
         "0000-00-00"
       }
     }
   }
 
-  def getDateHourForRequest(requestDateStr: String):String = {
+  def getDateHourForRequest(requestDateStr: String): String = {
     try {
       val split = requestDateStr.split("\\[")(1).split("\\]")(0).split(":")
       val dateStr = split(0).split("/")
       val hour = split(1)
-      dateStr(2) + "-" + changeEnglishMonthTo(dateStr(1)) + "-" + dateStr(0)+" "+hour
+      dateStr(2) + "-" + changeEnglishMonthTo(dateStr(1)) + "-" + dateStr(0) + " " + hour
     } catch {
-      case ex: Exception =>{
+      case ex: Exception => {
         "0000-00-00 00"
       }
     }
@@ -287,11 +296,19 @@ object DateUtils {
     null
   }
 
-  def getDay(bt:Int):String={
+  /**
+    * 根据传入的参数，获取日期
+    *
+    * @param bt
+    * @return
+    */
+
+  def getDay(bt: Int): String = {
     val cal = Calendar.getInstance()
     var dt = ""
-    cal.add(Calendar.DATE,bt)
+    cal.add(Calendar.DATE, bt)
     dt = DATE_FORMAT.format(cal.getTime)
     dt
   }
+
 }

@@ -8,6 +8,7 @@ public class ConfigurationUtil {
 
     /**
      * 根据key获取properties文件的value
+     *
      * @param key
      * @return
      */
@@ -21,6 +22,7 @@ public class ConfigurationUtil {
             e.printStackTrace();
         }
         return (String) properties.get(key);
+
     }
 
     public static String getEnvProperty(String key) {

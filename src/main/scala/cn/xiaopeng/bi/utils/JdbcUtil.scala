@@ -56,14 +56,13 @@ object JdbcUtil {
     val url = ConfigurationUtil.getProperty(Constants.JDBC_XIAOPENG2FX_URL)
     val driver = ConfigurationUtil.getProperty(Constants.JDBC_DRIVER)
     try {
-      Class.forName(driver)
-      return DriverManager.getConnection(url)
+      Class.forName(driver);
+      DriverManager.getConnection(url)
     } catch {
-      case ex: Exception => {
-        println("获取数据库连接错误：Exception=" + ex)
-      }
+      case e: Exception => println("获取数据库链接错误：Exception=" + e)
         return null
     }
+
   }
 
 
