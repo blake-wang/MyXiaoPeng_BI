@@ -19,8 +19,8 @@ object GamePublicDao {
   def isNewRegiDevDay(pkgCode: String, imei: String, publishDate: String, medium_channel: String, ad_site_channel: String, gameId: Int, conn: Connection): Int = {
     var res = 0
     val sql2Mysql = "select left(regi_hour,10) as publish_date from bi_gamepublic_regi_detail " +
-      "where ad_label=? and imei=? and parent_channel=? and child_channel=? and game_id=? order by regi_hour asc limit 1"
-    val ps: PreparedStatement = conn.prepareStatement(sql2Mysql)
+      "where ad_laber=? and imei=? and parent_channel=? and child_channel=? and game_id=? order by regi_hour asc limit 1"
+    val ps = conn.prepareStatement(sql2Mysql)
     ps.setString(1, pkgCode)
     ps.setString(2, imei)
     ps.setString(3, medium_channel)
@@ -32,11 +32,12 @@ object GamePublicDao {
         res = 1
       } else res = 0
     }
+    result.close()
     ps.close()
     return res
   }
-  //从库中判断是否为新注册设备
 
+  //从库中判断是否为新注册设备
 
 
   /**
@@ -45,17 +46,9 @@ object GamePublicDao {
     * @param gameAccount
     * @return
     */
-  def isNewRegiAccountDay(gameAccount: String, regiDate: String, isNewRegiDay: Int, pkgId: String, Imei: String, jedis: Jedis): Int = {
+  def isNewRegiAccountDay(gameAccount: String, regiDate: String, isNewRegiDay: Int, pkgId: String, Imei: String, jedis: Jedis, arr: Map[String, String]): Int = {
     var res = 0
-    jedis.select(0)
-    val arr = jedis.hgetAll(gameAccount)
     var reg_time = arr.get("reg_time")
-    val expandChannel = arr.get("expand_channel")
-    val imei = arr.get("imei")
-    if (reg_time == null) {
-      val s = MissInfo2Redis.checkAccount(gameAccount)
-    }
-    1
   }
 
   def isNewLgAccountDay(pkgCode: String, gameAccount: String, publishDate: String, gameId: Int, isNewRegiDevDay: Int, isNewRegiAccountDay: Int, jedis: Jedis): Int = {

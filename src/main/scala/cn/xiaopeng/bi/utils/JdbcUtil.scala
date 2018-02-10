@@ -81,20 +81,24 @@ object JdbcUtil {
     }
   }
 
+  /**
+    * 执行批处理
+    * @param sqlText
+    * @param params
+    * @param conn
+    */
   def doBatch(sqlText: String, params: ArrayBuffer[Array[Any]], conn: Connection): Unit = {
     if (params.length > 0) {
       val pstat = conn.prepareStatement(sqlText)
       pstat.clearBatch()
-      //
       for (param <- params) {
         for (index <- 0 to param.length - 1) {
-          //
           pstat.setObject(index + 1, param(index))
         }
         pstat.addBatch()
       }
       pstat.executeBatch()
-      pstat.close()
+      pstat.close
       params.clear()
     }
   }
@@ -125,7 +129,7 @@ object JdbcUtil {
         }
         pstat.executeUpdate()
       }
-      params.clear
+      params.clear()
     }
   }
 }

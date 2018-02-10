@@ -9,9 +9,7 @@ import org.json.Test
   * Created by JSJSB-0071 on 2016/8/25.
   */
 object DateUtils {
-  def getTodayTime(): Any = {
 
-  }
 
   val HOUR_FORMAT = new SimpleDateFormat("yyyy-MM-dd HH")
   val TIME_FORMAT = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss")
@@ -22,17 +20,33 @@ object DateUtils {
     //    val date = getDate
     //    println(date)
 
-//    val day = getDay(1)
-//    println(day)
-//
-//    val a = beforeHour("2017-10-12 11", "2017-10-12 15")
-//    println(a)
+    //    val day = getDay(1)
+    //    println(day)
+    //
+    //    val a = beforeHour("2017-10-12 11", "2017-10-12 15")
+    //    println(a)
 
 
-    for (ii <- -1 to 2){
-      val a = getDay(ii)
-      println(a)
-    }
+    //    for (ii <- -1 to 2) {
+    //      val a = getDay(ii)
+    //      println(a)
+    //    }
+
+
+    val dd = DATE_FORMAT.parse("2018-02-09 14:52:36")
+    println(dd)
+    val ddd = HOUR_FORMAT.parse("2018-02-09 14:52:36")
+    println(ddd)
+    val dddd = TIME_FORMAT.parse("2018-02-09 14:52:22")
+    println(dddd)
+
+    val a = beforeDay("2018-02-09 14", "2018-02-09 15")
+    println(a)
+    val b = beforeDay("2018-02-09 15", "2018-02-09 15")
+    println(b)
+    val c = beforeDay("2018-02-09 16", "2018-02-09 15")
+    println(c)
+
 
   }
 
@@ -92,10 +106,7 @@ object DateUtils {
       val dateTime2 = HOUR_FORMAT.parse(time2)
       if (dateTime1.before(dateTime2)) return true
     } catch {
-      case e: Exception => {
-        e.printStackTrace()
-        return false
-      }
+      case e: Exception => e.printStackTrace(); return false
     }
     return false
   }
@@ -134,10 +145,9 @@ object DateUtils {
       val dateTime2 = DATE_FORMAT.parse(time2)
       if (dateTime1.before(dateTime2)) return true
     } catch {
-      case e: Exception => {
+      case e: Exception =>
         e.printStackTrace()
         return false
-      }
     }
     return false
   }
@@ -180,7 +190,7 @@ object DateUtils {
 
       dateStr(2).split(":", -1)(0) + "-" + changeEnglishMonthTo(dateStr(1)) + "-" + dateStr(0)
     } catch {
-      case ex: Exception => {
+      case e: Exception => {
         "0000-00-00"
       }
     }
@@ -309,6 +319,16 @@ object DateUtils {
     cal.add(Calendar.DATE, bt)
     dt = DATE_FORMAT.format(cal.getTime)
     dt
+  }
+
+  /**
+    * 获取当前的时间，转换成字符串返回
+    * @return
+    */
+  def getTodayTime(): String = {
+    val now = new Date()
+    TIME_FORMAT.format(now)
+
   }
 
 }

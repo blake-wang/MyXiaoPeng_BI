@@ -72,15 +72,15 @@ object Commons {
   /**
     * 获取发行组&平台
     */
-  def getPubGameGroupIdAndOs(gameId:Int,conn:Connection):Array[String]={
-    var jg = Array[String]("1","0")
-    var stmt:PreparedStatement = null
-    val sql:String = "select distinct system_type os,group_id from game_sdk where old_game_id=? limit 1"
+  def getPubGameGroupIdAndOs(gameId: Int, conn: Connection): Array[String] = {
+    var jg = Array[String]("0", "1")
+    var stmt: PreparedStatement = null
+    val sql = "select distinct system_type os,group_id from game_sdk where old_game_id=? limit 1"
     stmt = conn.prepareStatement(sql)
-    stmt.setInt(1,gameId)
-    val rs:ResultSet = stmt.executeQuery()
-    while(rs.next()){
-      jg = Array[String](rs.getString("group_id"),rs.getString("os"))
+    stmt.setInt(1, gameId)
+    val rs = stmt.executeQuery()
+    while (rs.next()) {
+      jg = Array[String](rs.getString("group_id"), rs.getString("os"))
     }
     stmt.close()
     return jg

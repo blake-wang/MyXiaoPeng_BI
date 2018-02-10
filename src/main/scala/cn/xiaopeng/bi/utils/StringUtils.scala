@@ -69,7 +69,7 @@ object StringUtils {
   def isRequestLog(log: String, regx: String): Boolean = {
     val p1 = regx.r
     val p1Matches = log match {
-      case p1 => true
+      case p1() => true
       case _ => false
     }
     p1Matches
